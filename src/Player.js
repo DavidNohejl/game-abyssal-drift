@@ -450,18 +450,17 @@ export class Player {
         targetPos.y = maxTerrainAhead + 8.5;
         this.autopilotStatus = "COLLISION WARNING: AVOIDING OBSTACLE";
       }
-      
       // 3. Proportional yaw steering using local horizontal target
-      const distH = toTargetH.length();
       if (distH < 0.1) {
         yawInput = 0;
       } else {
         const localTargetH = toTargetH.clone().applyQuaternion(sub.quaternion.clone().invert()).normalize();
-        if (localTargetH.z < 0) {
-          // Target is behind, turn around in the shortest direction
-          yawInput = localTargetH.x >= 0 ? -1.6 : 1.6;
+        if (localTargetH.z < -0.99) {
+          // If target is directly behind (near 180 deg), kick it to start turning left
+          yawInput = 1.6;
         } else {
-          yawInput = -localTargetH.x * 4.0;
+          // Smooth proportional steering
+          yawInput = localTargetH.x * 4.0;
           yawInput = Math.max(-1.6, Math.min(1.6, yawInput));
         }
       }
@@ -490,6 +489,16 @@ export class Player {
       }
 
       // 6. Active vertical heave thrust
+      if (Math.random() < 0.02) {
+        console.log("Autopilot Log:", {
+          status: this.autopilotStatus,
+          pos: [sub.position.x.toFixed(1), sub.position.y.toFixed(1), sub.position.z.toFixed(1)],
+          target: [targetPos.x.toFixed(1), targetPos.y.toFixed(1), targetPos.z.toFixed(1)],
+          distH: distH.toFixed(1),
+          yawInput: yawInput.toFixed(2),
+          selectedGear: this.selectedGear
+        });
+      }
       const speedMult = 1.0 + (this.upgrades.speed || 0) * 0.15;
       const heaveSpeedMap = { 0: 2.0, 1: 3.0, 2: 5.0, 3: 7.0 };
       const heaveSpeed = heaveSpeedMap[this.selectedGear] * speedMult;
