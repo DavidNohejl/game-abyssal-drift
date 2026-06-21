@@ -381,7 +381,10 @@ export class Player {
     let yawInput = 0;
     
     // Input Steer handling
-    if (input.mouseControl) {
+    if (input.joystick.active) {
+      yawInput = -input.joystick.x * 2.2;
+      pitchInput = input.joystick.y * 2.0;
+    } else if (input.mouseControl) {
       if (Math.abs(input.mouse.x) > 0.05) yawInput = -input.mouse.x * 2.2;
       if (Math.abs(input.mouse.y) > 0.05) pitchInput = input.mouse.y * 2.0;
     } else {
