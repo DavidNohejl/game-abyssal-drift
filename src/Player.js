@@ -21,6 +21,14 @@ export class Player {
     this.isDocked = false;
     this.dockCooldown = 0;
     
+    // Upgrades and autopilot navigation state
+    this.upgrades = {
+      speed: 0,
+      oxygen: 0,
+      autopilot: false // unlocked or not
+    };
+    this.autopilotActive = false;
+    
     // Bubble Pool for exhaust bubbles
     this.bubblePool = [];
     this.bubblePoolIndex = 0;
@@ -259,6 +267,7 @@ export class Player {
     this.selectedGear = 2; // start back at cruise
     this.isDocked = false;
     this.dockCooldown = 0;
+    this.autopilotActive = false;
     
     this.mesh.position.set(0, -15, 0);
     this.mesh.rotation.set(0, 0, 0);
@@ -380,18 +389,55 @@ export class Player {
     let pitchInput = 0;
     let yawInput = 0;
     
-    // Input Steer handling
-    if (input.joystick.active) {
-      yawInput = -input.joystick.x * 2.2;
-      pitchInput = input.joystick.y * 2.0;
-    } else if (input.mouseControl) {
-      if (Math.abs(input.mouse.x) > 0.05) yawInput = -input.mouse.x * 2.2;
-      if (Math.abs(input.mouse.y) > 0.05) pitchInput = input.mouse.y * 2.0;
+    // Check for manual steering to override autopilot
+    const hasSteeringInput = 
+      input.keys.w || input.keys.s || input.keys.a || input.keys.d || 
+      input.keys.Space || input.keys.c ||
+      (input.mouseControl && (Math.abs(input.mouse.x) > 0.1 || Math.abs(input.mouse.y) > 0.1)) ||
+      input.joystick.active;
+      
+    if (this.autopilotActive && hasSteeringInput) {
+      this.autopilotActive = false;
+      if (typeof triggerSurfaceBanner === 'function') {
+        triggerSurfaceBanner("AUTOPILOT OVERRIDDEN");
+      }
+    }
+    
+    if (this.autopilotActive) {
+      const targetPos = new THREE.Vector3(0, -2.2, 0);
+      const toTarget = targetPos.clone().sub(sub.position);
+      const dist = toTarget.length();
+      
+      if (dist < 4.5) {
+        this.autopilotActive = false;
+      } else {
+        const localTarget = toTarget.clone().applyQuaternion(sub.quaternion.clone().invert()).normalize();
+        
+        yawInput = -localTarget.x * 3.5;
+        yawInput = Math.max(-1.6, Math.min(1.6, yawInput));
+        
+        pitchInput = -localTarget.y * 3.5;
+        pitchInput = Math.max(-1.8, Math.min(1.8, pitchInput));
+        
+        // Force forward speed if stopped
+        if (this.selectedGear === 0) {
+          this.selectedGear = 2;
+        }
+      }
     } else {
-      if (input.keys.w) pitchInput = 1.8;  // Pitch down
-      if (input.keys.s) pitchInput = -1.8; // Pitch up
-      if (input.keys.a) yawInput = 1.6;    // Turn left
-      if (input.keys.d) yawInput = -1.6;   // Turn right
+      // Normal Input Steer handling
+      if (input.joystick.active) {
+        yawInput = -input.joystick.x * 2.2;
+        pitchInput = input.joystick.y * 2.0;
+      } else if (input.mouseControl) {
+        if (Math.abs(input.mouse.x) > 0.05) yawInput = -input.mouse.x * 2.2;
+        if (Math.abs(input.mouse.y) > 0.05) pitchInput = input.mouse.y * 2.0;
+      } else {
+        if (input.keys.w) pitchInput = 1.8;  // Pitch down
+        if (input.keys.s) pitchInput = -1.8; // Pitch up
+        if (input.keys.a) yawInput = 1.6;    // Turn left
+        if (input.keys.d) yawInput = -1.6;   // Turn right
+      }
     }
     
     // Apply Rotation speeds
@@ -409,15 +455,18 @@ export class Player {
     sub.rotateOnAxis(new THREE.Vector3(0, 0, 1), (targetRoll - currentRoll) * 0.08);
     
     // SPEED KINEMATICS (No boosts, cruise speed strictly mapped to gear)
+    const speedMult = 1.0 + (this.upgrades.speed || 0) * 0.15;
     const cruisingSpeedMap = { 0: 0.0, 1: 3.5, 2: 7.0, 3: 11.5 };
-    const baseCruisingSpeed = cruisingSpeedMap[this.selectedGear];
+    const baseCruisingSpeed = cruisingSpeedMap[this.selectedGear] * speedMult;
     
     // VERTICAL HEAVE CONTROL (Space to go Up, C to go Down)
     const heaveSpeedMap = { 0: 2.0, 1: 3.0, 2: 5.0, 3: 7.0 };
-    const heaveSpeed = heaveSpeedMap[this.selectedGear];
+    const heaveSpeed = heaveSpeedMap[this.selectedGear] * speedMult;
     let heaveInput = 0;
-    if (input.keys.Space) heaveInput += heaveSpeed;
-    if (input.keys.c) heaveInput -= heaveSpeed;
+    if (!this.autopilotActive) {
+      if (input.keys.Space) heaveInput += heaveSpeed;
+      if (input.keys.c) heaveInput -= heaveSpeed;
+    }
 
     // Combine forward and global vertical velocity
     this.velocity.copy(forward).multiplyScalar(baseCruisingSpeed);
@@ -505,7 +554,8 @@ export class Player {
     if (this.depth > this.maxDepth) this.maxDepth = this.depth;
     
     // Drain oxygen (life support battery) slowly
-    this.oxygen = Math.max(0, this.oxygen - delta * 1.15);
+    const o2DrainMult = 1.0 - (this.upgrades.oxygen || 0) * 0.20;
+    this.oxygen = Math.max(0, this.oxygen - delta * 1.15 * o2DrainMult);
   }
 
   updateMenuAnimation(time, delta, camera) {

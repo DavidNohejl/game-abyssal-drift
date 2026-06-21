@@ -15,6 +15,7 @@ const STATE_PAUSED = 'PAUSED'; // Used when database modal is open
 
 class Game {
   constructor() {
+    window.game = this;
     this.state = STATE_MENU;
     this.graphicsHigh = true;
     this.time = 0;
@@ -22,6 +23,11 @@ class Game {
     // Scientific Database persistent state
     this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
     this.loadDatabase();
+
+    // Research Upgrades persistent state
+    this.upgrades = { speed: 0, oxygen: 0, autopilot: false };
+    this.loadUpgrades();
+    
     this.scanProgress = 0;
     this.lastScanToneTime = 0;
     this.headlightOn = true;
@@ -51,6 +57,7 @@ class Game {
     this.input = new Input(this, this.ui.dom.mouseCheckbox);
     this.environment = new Environment(this.scene);
     this.player = new Player(this.scene);
+    this.player.upgrades = this.upgrades; // sync loaded upgrades to player
     this.entityManager = new EntityManager(this.scene, this.graphicsHigh);
     
     // Initial spawn layout
@@ -130,6 +137,23 @@ class Game {
     localStorage.setItem('abyssal_drift_db', JSON.stringify(this.database));
   }
 
+  loadUpgrades() {
+    const saved = localStorage.getItem('abyssal_drift_upgrades');
+    if (saved) {
+      try {
+        this.upgrades = JSON.parse(saved);
+      } catch (e) {
+        this.upgrades = { speed: 0, oxygen: 0, autopilot: false };
+      }
+    } else {
+      this.upgrades = { speed: 0, oxygen: 0, autopilot: false };
+    }
+  }
+
+  saveUpgrades() {
+    localStorage.setItem('abyssal_drift_upgrades', JSON.stringify(this.upgrades));
+  }
+
   setGraphics(high) {
     this.graphicsHigh = high;
     this.ui.setGraphicsUI(high);
@@ -166,6 +190,93 @@ class Game {
     }
   }
 
+  toggleResearchModal(show) {
+    if (show) {
+      if (this.state !== STATE_PLAYING) return;
+      this.state = STATE_PAUSED;
+      this.ui.renderResearch(this.upgrades, this.player.score);
+      this.ui.dom.researchModal.classList.remove('hidden');
+      
+      // Hide scanning visual ring & lasers
+      this.scanRing.visible = false;
+      this.scanLaser.visible = false;
+      this.ui.hideScannerHUD();
+    } else {
+      if (this.state !== STATE_PAUSED) return;
+      this.state = STATE_PLAYING;
+      this.ui.dom.researchModal.classList.add('hidden');
+      // If player is still docked, trigger autopilot status update in case they bought it
+      if (this.player.isDocked) {
+        this.ui.renderResearch(this.upgrades, this.player.score);
+      }
+    }
+  }
+
+  undockSubmarine() {
+    this.toggleResearchModal(false);
+    this.player.isDocked = false;
+    this.player.mesh.position.y = -6.5; // push down out of range
+    this.player.dockCooldown = this.time + 2.0; // 2 seconds cooldown
+    this.player.autopilotActive = false;
+    this.ui.updateAutopilotUI(false);
+    this.ui.triggerSurfaceBanner("MISSION RESUMED");
+  }
+
+  purchaseUpgrade(type) {
+    const speedCosts = [3, 5, 8];
+    const oxygenCosts = [3, 5, 8];
+    
+    let cost = 0;
+    if (type === 'speed') {
+      if (this.upgrades.speed >= 3) return;
+      cost = speedCosts[this.upgrades.speed];
+    } else if (type === 'oxygen') {
+      if (this.upgrades.oxygen >= 3) return;
+      cost = oxygenCosts[this.upgrades.oxygen];
+    } else if (type === 'autopilot') {
+      if (this.upgrades.autopilot) return;
+      cost = 6;
+    }
+    
+    if (this.player.score >= cost) {
+      this.player.score -= cost;
+      if (type === 'speed') {
+        this.upgrades.speed++;
+      } else if (type === 'oxygen') {
+        this.upgrades.oxygen++;
+      } else if (type === 'autopilot') {
+        this.upgrades.autopilot = true;
+      }
+      
+      this.saveUpgrades();
+      // Sync to player logic
+      this.player.upgrades = this.upgrades;
+      
+      // Play upgrade success sound
+      audio.playStart();
+      
+      // Re-render UI
+      this.ui.renderResearch(this.upgrades, this.player.score);
+      this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score);
+    }
+  }
+
+  toggleAutopilot() {
+    if (this.state !== STATE_PLAYING) return;
+    if (!this.upgrades.autopilot) return; // not unlocked yet
+    
+    this.player.autopilotActive = !this.player.autopilotActive;
+    this.ui.updateAutopilotUI(this.player.autopilotActive);
+    
+    if (this.player.autopilotActive) {
+      this.ui.triggerSurfaceBanner("AUTOPILOT ENGAGED");
+      audio.playBubble();
+    } else {
+      this.ui.triggerSurfaceBanner("AUTOPILOT DISENGAGED");
+      audio.playBubble();
+    }
+  }
+
   toggleHeadlight() {
     if (this.state !== STATE_PLAYING) return;
     this.headlightOn = !this.headlightOn;
@@ -179,10 +290,14 @@ class Game {
     
     this.state = STATE_PLAYING;
     this.player.reset();
+    this.player.upgrades = this.upgrades; // sync loaded upgrades to player
     this.headlightOn = true;
     this.player.setHeadlight(true);
     this.ui.updateHeadlightUI(true);
     this.ui.updateGearUI(2); // visual sync on startup
+    if (this.ui.dom.btnAutopilotToggle) {
+      this.ui.dom.btnAutopilotToggle.classList.toggle('hidden', !this.upgrades.autopilot);
+    }
     
     // Reset scanner visuals
     this.scanRing.visible = false;
@@ -255,6 +370,7 @@ class Game {
       if (distToVessel < 4.5 && !this.player.isDocked && this.time > this.player.dockCooldown) {
         this.player.isDocked = true;
         this.ui.triggerSurfaceBanner("SUBMERSIBLE DOCKED");
+        this.toggleResearchModal(true);
       }
       this.ui.updateVesselHUD(distToVessel, this.player.isDocked);
       

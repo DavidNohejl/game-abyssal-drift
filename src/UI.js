@@ -31,6 +31,17 @@ export class UI {
       btnLightsToggle: document.getElementById('btn-lights-toggle'),
       btnDatabaseClose: document.getElementById('btn-database-close'),
       databaseModal: document.getElementById('database-modal'),
+      btnAutopilotToggle: document.getElementById('btn-autopilot-toggle'),
+      researchModal: document.getElementById('research-modal'),
+      btnResearchClose: document.getElementById('btn-research-close'),
+      btnResearchUndock: document.getElementById('btn-research-undock'),
+      btnUpgradeSpeed: document.getElementById('btn-upgrade-speed'),
+      btnUpgradeOxygen: document.getElementById('btn-upgrade-oxygen'),
+      btnUpgradeAutopilot: document.getElementById('btn-upgrade-autopilot'),
+      researchPearlsValue: document.getElementById('research-pearls-value'),
+      speedLevel: document.getElementById('speed-level'),
+      oxygenLevel: document.getElementById('oxygen-level'),
+      autopilotLevel: document.getElementById('autopilot-level'),
       scannerHud: document.getElementById('scanner-hud'),
       scannerTargetName: document.getElementById('scanner-target-name'),
       scannerTargetDist: document.getElementById('scanner-target-dist'),
@@ -80,6 +91,26 @@ export class UI {
       this.game.toggleDatabaseModal(false);
     });
 
+    // Research Modal buttons
+    this.dom.btnResearchClose.addEventListener('click', () => {
+      this.game.toggleResearchModal(false);
+    });
+    this.dom.btnResearchUndock.addEventListener('click', () => {
+      this.game.undockSubmarine();
+    });
+    this.dom.btnUpgradeSpeed.addEventListener('click', () => {
+      this.game.purchaseUpgrade('speed');
+    });
+    this.dom.btnUpgradeOxygen.addEventListener('click', () => {
+      this.game.purchaseUpgrade('oxygen');
+    });
+    this.dom.btnUpgradeAutopilot.addEventListener('click', () => {
+      this.game.purchaseUpgrade('autopilot');
+    });
+    this.dom.btnAutopilotToggle.addEventListener('click', () => {
+      this.game.toggleAutopilot();
+    });
+
     // Pagination dots scroll tracking for mobile database modal
     const dbGrid = document.querySelector('.db-grid');
     const dbDots = document.querySelectorAll('.db-dot');
@@ -91,6 +122,14 @@ export class UI {
         dbDots.forEach((dot, i) => {
           dot.classList.toggle('active', i === activeIndex);
         });
+      });
+    }
+
+    if (this.dom.hudStatVessel) {
+      this.dom.hudStatVessel.addEventListener('click', () => {
+        if (this.game.player.isDocked && this.game.state === 'PLAYING') {
+          this.game.toggleResearchModal(true);
+        }
       });
     }
   }
@@ -253,6 +292,89 @@ export class UI {
     const counterEl = document.getElementById('db-scan-counter');
     if (counterEl) {
       counterEl.innerHTML = `<span class="counter-num">${scanned}</span> / <span class="counter-num">${total}</span> SPECIES CATALOGUED`;
+    }
+  }
+
+  renderResearch(upgrades, score) {
+    if (this.dom.researchPearlsValue) {
+      this.dom.researchPearlsValue.innerText = score;
+    }
+
+    const speedCosts = [3, 5, 8];
+    const oxygenCosts = [3, 5, 8];
+    
+    // 1. Speed Upgrade
+    const speedItem = document.getElementById('research-item-speed');
+    const speedBtn = this.dom.btnUpgradeSpeed;
+    const speedLvlEl = this.dom.speedLevel;
+    if (upgrades.speed >= 3) {
+      if (speedItem) speedItem.classList.add('maxed');
+      if (speedLvlEl) speedLvlEl.innerText = "MAX LEVEL";
+      if (speedBtn) {
+        speedBtn.innerText = "MAXED";
+        speedBtn.disabled = true;
+      }
+    } else {
+      if (speedItem) speedItem.classList.remove('maxed');
+      const cost = speedCosts[upgrades.speed];
+      if (speedLvlEl) speedLvlEl.innerText = `Lvl ${upgrades.speed} / 3`;
+      if (speedBtn) {
+        speedBtn.innerText = `UPGRADE (${cost} 💎)`;
+        speedBtn.disabled = (score < cost);
+      }
+    }
+
+    // 2. Oxygen Upgrade
+    const oxygenItem = document.getElementById('research-item-oxygen');
+    const oxygenBtn = this.dom.btnUpgradeOxygen;
+    const oxygenLvlEl = this.dom.oxygenLevel;
+    if (upgrades.oxygen >= 3) {
+      if (oxygenItem) oxygenItem.classList.add('maxed');
+      if (oxygenLvlEl) oxygenLvlEl.innerText = "MAX LEVEL";
+      if (oxygenBtn) {
+        oxygenBtn.innerText = "MAXED";
+        oxygenBtn.disabled = true;
+      }
+    } else {
+      if (oxygenItem) oxygenItem.classList.remove('maxed');
+      const cost = oxygenCosts[upgrades.oxygen];
+      if (oxygenLvlEl) oxygenLvlEl.innerText = `Lvl ${upgrades.oxygen} / 3`;
+      if (oxygenBtn) {
+        oxygenBtn.innerText = `UPGRADE (${cost} 💎)`;
+        oxygenBtn.disabled = (score < cost);
+      }
+    }
+
+    // 3. Autopilot Upgrade
+    const autopilotItem = document.getElementById('research-item-autopilot');
+    const autopilotBtn = this.dom.btnUpgradeAutopilot;
+    const autopilotLvlEl = this.dom.autopilotLevel;
+    if (upgrades.autopilot) {
+      if (autopilotItem) autopilotItem.classList.add('maxed');
+      if (autopilotLvlEl) autopilotLvlEl.innerText = "UNLOCKED";
+      if (autopilotBtn) {
+        autopilotBtn.innerText = "UNLOCKED";
+        autopilotBtn.disabled = true;
+      }
+      if (this.dom.btnAutopilotToggle) {
+        this.dom.btnAutopilotToggle.classList.remove('hidden');
+      }
+    } else {
+      if (autopilotItem) autopilotItem.classList.remove('maxed');
+      if (autopilotLvlEl) autopilotLvlEl.innerText = "LOCKED";
+      if (autopilotBtn) {
+        autopilotBtn.innerText = "UNLOCK (6 💎)";
+        autopilotBtn.disabled = (score < 6);
+      }
+      if (this.dom.btnAutopilotToggle) {
+        this.dom.btnAutopilotToggle.classList.add('hidden');
+      }
+    }
+  }
+
+  updateAutopilotUI(active) {
+    if (this.dom.btnAutopilotToggle) {
+      this.dom.btnAutopilotToggle.classList.toggle('active', active);
     }
   }
 
@@ -433,9 +555,17 @@ export class UI {
   updateVesselHUD(dist, isDocked) {
     if (!this.dom.statVessel) return;
     if (isDocked) {
-      this.dom.statVessel.innerHTML = `<span style="color: var(--color-secondary); font-weight: 700; text-shadow: var(--shadow-neon-secondary);">DOCKED</span>`;
+      this.dom.statVessel.innerHTML = `<span style="color: var(--color-secondary); font-weight: 700; text-shadow: var(--shadow-neon-secondary); cursor: pointer;" title="Click to open Upgrades Lab">DOCKED</span>`;
+      if (this.dom.hudStatVessel) {
+        this.dom.hudStatVessel.style.cursor = 'pointer';
+        this.dom.hudStatVessel.title = "Click to open Upgrades Lab";
+      }
     } else {
       this.dom.statVessel.innerHTML = Math.round(dist) + `<span class="unit">m</span>`;
+      if (this.dom.hudStatVessel) {
+        this.dom.hudStatVessel.style.cursor = '';
+        this.dom.hudStatVessel.title = "";
+      }
     }
   }
 }
