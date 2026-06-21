@@ -10,6 +10,7 @@ class SoundEngine {
     this.masterGain = null;
     this.ambienceGain = null;
     this.initialized = false;
+    this.pingInterval = null;
   }
 
   // Initialized on first user click to satisfy browser security rules
@@ -43,29 +44,28 @@ class SoundEngine {
     return this.enabled;
   }
 
-  // Create a continuous, deep underwater drone using LFOs and low-pass noise
+  // Create a continuous, smooth underwater drone using LFOs, swelling noise wash, and soft pings
   setupAmbience() {
     if (!this.ctx) return;
 
-    // 1. Create a deep hum oscillator
+    // 1. Create a deep, smooth sub-bass sine drone (instead of buzzy triangle)
     const osc = this.ctx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(55, this.ctx.currentTime); // Low A (A1)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(38, this.ctx.currentTime); // 38Hz (smooth sub rumble)
 
-    // 2. Create LFO to modulate hum frequency (simulates water pressure waves)
+    // LFO to slowly modulate drone frequency (simulates subtle underwater currents)
     const lfo = this.ctx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(0.2, this.ctx.currentTime); // Very slow: 5s cycle
+    lfo.frequency.setValueAtTime(0.1, this.ctx.currentTime); // 10s cycle
     
     const lfoGain = this.ctx.createGain();
-    lfoGain.gain.setValueAtTime(3, this.ctx.currentTime); // +/- 3Hz modulation
+    lfoGain.gain.setValueAtTime(1.5, this.ctx.currentTime); // +/- 1.5Hz
 
-    // Connect LFO to Hum Frequency
     lfo.connect(lfoGain);
     lfoGain.connect(osc.frequency);
 
-    // 3. Create a noise buffer for the gentle water flow hiss
-    const bufferSize = this.ctx.sampleRate * 2; // 2 seconds of noise
+    // 2. Create a noise buffer for the gentle water wash
+    const bufferSize = this.ctx.sampleRate * 2;
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -76,29 +76,113 @@ class SoundEngine {
     noiseSource.buffer = noiseBuffer;
     noiseSource.loop = true;
 
-    // 4. Create a filter to cut off noise frequencies above 120Hz (muffled water)
+    // Filter to cut off noise frequencies above 100Hz (muffled water)
     this.ambienceFilter = this.ctx.createBiquadFilter();
     this.ambienceFilter.type = 'lowpass';
-    this.ambienceFilter.frequency.setValueAtTime(100, this.ctx.currentTime);
+    this.ambienceFilter.frequency.setValueAtTime(80, this.ctx.currentTime);
     this.ambienceFilter.Q.setValueAtTime(1, this.ctx.currentTime);
 
-    // 5. Ambient gain controls
+    // Soothing LFO to slowly swell/fade water wash (12s cycle)
+    const swellLfo = this.ctx.createOscillator();
+    swellLfo.type = 'sine';
+    swellLfo.frequency.setValueAtTime(0.08, this.ctx.currentTime);
+
+    const swellGain = this.ctx.createGain();
+    swellGain.gain.setValueAtTime(0.08, this.ctx.currentTime); // Mod depth
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.12, this.ctx.currentTime); // Base wash volume (very gentle)
+
+    swellLfo.connect(swellGain);
+    swellGain.connect(noiseGain.gain);
+
+    // Ambient gain controls
     this.ambienceGain = this.ctx.createGain();
-    this.ambienceGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    this.ambienceGain.gain.setValueAtTime(0.18, this.ctx.currentTime); // Softer overall
 
     // Connect nodes
     osc.connect(this.ambienceFilter);
-    noiseSource.connect(this.ambienceFilter);
+    
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(this.ambienceFilter);
+    
     this.ambienceFilter.connect(this.ambienceGain);
     this.ambienceGain.connect(this.masterGain);
 
     // Start playback
     osc.start(0);
     lfo.start(0);
+    swellLfo.start(0);
     noiseSource.start(0);
 
     this.ambienceNode = osc;
     this.ambienceNoiseNode = noiseSource;
+
+    // Start periodic echoing sonar pings for high-tech deep-sea atmosphere
+    this.startAmbientPing();
+  }
+
+  startAmbientPing() {
+    if (!this.ctx || this.pingInterval) return;
+    
+    const playPing = () => {
+      if (!this.enabled || !this.initialized || this.ctx.state === 'suspended') return;
+      
+      const now = this.ctx.currentTime;
+      
+      // Primary Ping
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1050, now);
+      
+      const gainNode = this.ctx.createGain();
+      gainNode.gain.setValueAtTime(0.001, now);
+      gainNode.gain.linearRampToValueAtTime(0.015, now + 0.05); // very soft attack
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 4.0); // long decay
+      
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1050, now);
+      filter.Q.setValueAtTime(1.5, now);
+      
+      osc.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      osc.start(now);
+      osc.stop(now + 4.1);
+      
+      // Soft echo 0.95 seconds later
+      setTimeout(() => {
+        if (!this.enabled || !this.initialized || this.ctx.state === 'suspended') return;
+        const echoNow = this.ctx.currentTime;
+        
+        const echoOsc = this.ctx.createOscillator();
+        echoOsc.type = 'sine';
+        echoOsc.frequency.setValueAtTime(1000, echoNow); // lower pitch
+        
+        const echoGain = this.ctx.createGain();
+        echoGain.gain.setValueAtTime(0.001, echoNow);
+        echoGain.gain.linearRampToValueAtTime(0.004, echoNow + 0.05);
+        echoGain.gain.exponentialRampToValueAtTime(0.001, echoNow + 3.0);
+        
+        const echoFilter = this.ctx.createBiquadFilter();
+        echoFilter.type = 'bandpass';
+        echoFilter.frequency.setValueAtTime(1000, echoNow);
+        echoFilter.Q.setValueAtTime(1.0, echoNow);
+        
+        echoOsc.connect(echoFilter);
+        echoFilter.connect(echoGain);
+        echoGain.connect(this.masterGain);
+        
+        echoOsc.start(echoNow);
+        echoOsc.stop(echoNow + 3.1);
+      }, 950);
+    };
+    
+    // Play initial ping after 4 seconds
+    setTimeout(() => playPing(), 4000);
+    this.pingInterval = setInterval(playPing, 16000); // every 16 seconds
   }
 
   // Adjust underwater ambient hum properties based on the turtle's depth
