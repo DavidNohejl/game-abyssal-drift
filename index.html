@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Abyssal Drift - 3D Ocean Swimming Odyssey</title>
   <meta name="description" content="Embark on a beautiful 3D underwater journey as a sea turtle. Collect pearls, dodge jellyfish, and explore the depths of the ocean.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,6 +148,29 @@
     <div id="sonar-container" class="sonar-container">
       <canvas id="sonar-canvas" width="130" height="130"></canvas>
     </div>
+
+    <!-- TOUCH CONTROLS (Only visible on mobile/touch screens inside HUD) -->
+    <div id="touch-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+      <div id="touch-action-buttons">
+        <button id="btn-touch-up" class="touch-action-btn">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7.41 15.41L12 10.83L16.59 15.41L18 14L12 8L6 14L7.41 15.41Z"/></svg>
+          <span>UP</span>
+        </button>
+        <button id="btn-touch-down" class="touch-action-btn">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7.41 8.59L12 13.17L16.59 8.59L18 10L12 16L6 10L7.41 8.59Z"/></svg>
+          <span>DOWN</span>
+        </button>
+        <button id="btn-touch-scan" class="touch-action-btn scan-pulse">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 9C10.3 9 9 10.3 9 12S10.3 15 12 15 15 13.7 15 12 13.7 9 12 9M12 17C9.2 17 7 14.8 7 12S9.2 7 12 7 17 9.2 17 12 14.8 17 12 17M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5S21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5Z"/></svg>
+          <span>SCAN</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- GAME OVER / RECOVERY SCREEN -->
@@ -268,28 +291,6 @@
     </div>
   </div>
 
-  <!-- TOUCH CONTROLS (Only visible on mobile/touch screens) -->
-  <div id="touch-controls">
-    <div id="joystick-zone">
-      <div id="joystick-base">
-        <div id="joystick-knob"></div>
-      </div>
-    </div>
-    <div id="touch-action-buttons">
-      <button id="btn-touch-up" class="touch-action-btn">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7.41 15.41L12 10.83L16.59 15.41L18 14L12 8L6 14L7.41 15.41Z"/></svg>
-        <span>UP</span>
-      </button>
-      <button id="btn-touch-down" class="touch-action-btn">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7.41 8.59L12 13.17L16.59 8.59L18 10L12 16L6 10L7.41 8.59Z"/></svg>
-        <span>DOWN</span>
-      </button>
-      <button id="btn-touch-scan" class="touch-action-btn scan-pulse">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 9C10.3 9 9 10.3 9 12S10.3 15 12 15 15 13.7 15 12 13.7 9 12 9M12 17C9.2 17 7 14.8 7 12S9.2 7 12 7 17 9.2 17 12 14.8 17 12 17M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5S21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5Z"/></svg>
-        <span>SCAN</span>
-      </button>
-    </div>
-  </div>
 
   <!-- JavaScript Modules -->
   <script type="module" src="audio.js"></script>

@@ -35,13 +35,14 @@
   -webkit-user-select: none;
 }
 
-body {
+html, body {
   background-color: var(--bg-dark);
   color: var(--color-text);
   font-family: var(--font-body);
   overflow: hidden;
   width: 100vw;
   height: 100vh;
+  touch-action: none; /* Prevent default panning and zooming gestures */
 }
 
 h1,
@@ -726,15 +727,15 @@ input:checked+.slider:before {
   }
 
   .hud-left {
-    order: 1;
-  }
-
-  .hud-right {
     order: 2;
   }
 
-  .hud-center {
+  .hud-right {
     order: 3;
+  }
+
+  .hud-center {
+    order: 1;
     max-width: 100%;
     margin-top: 4px;
   }
@@ -1042,7 +1043,7 @@ input:checked+.slider:before {
   display: none; /* hidden by default, shown via CSS/JS on touch devices */
   justify-content: space-between;
   align-items: flex-end;
-  pointer-events: none;
+  pointer-events: none !important; /* Override #hud>div auto settings */
   z-index: 100;
 }
 
