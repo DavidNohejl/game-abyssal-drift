@@ -269,7 +269,8 @@ export class UI {
       jellyfish: "Warning: Stings deplete 18% oxygen & push sub back.",
       kelp: "Procedural sea flora. Sways in deep-sea currents.",
       rock: "Heavy volcanic basalt supporting geothermal coral polyps.",
-      fish: "Agile, schooling fish. Harmless and peaceful."
+      fish: "Agile, schooling fish. Harmless and peaceful.",
+      shark: "Solitary apex predator. Majestic, calm, and swims independently."
     };
 
     if (isScanned) {
@@ -326,6 +327,10 @@ export class UI {
       fish: {
         title: "Abyssal Schooling Fish",
         desc: "Small, agile schooling teleost fish. They navigate the dark depths in tight synchronised schools to evade larger predators. Peaceful and harmless."
+      },
+      shark: {
+        title: "Abyssal Solitary Shark",
+        desc: "A large solitary apex predator that cruises the ocean depths. Known for its slow, majestic movements. It wanders independently throughout the abyssal zone."
       }
     };
 

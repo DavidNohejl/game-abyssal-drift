@@ -22,7 +22,7 @@ class Game {
     this.gameHasStarted = false;
     
     // Scientific Database persistent state
-    this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
+    this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false, shark: false };
     this.loadDatabase();
 
     // Research Upgrades persistent state
@@ -127,10 +127,10 @@ class Game {
       try {
         this.database = JSON.parse(saved);
       } catch (e) {
-        this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
+        this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false, shark: false };
       }
     } else {
-      this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
+      this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false, shark: false };
     }
   }
 
@@ -305,7 +305,7 @@ class Game {
     localStorage.removeItem('abyssal_drift_upgrades');
     
     // Reset internal structures
-    this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
+    this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false, shark: false };
     this.upgrades = { speed: 0, oxygen: 0, autopilot: false };
     
     // Sync to player logic
@@ -481,7 +481,8 @@ class Game {
       ...this.entityManager.jellyfish.map(j => ({ mesh: j.mesh, type: 'jellyfish', name: 'Abyssal Jellyfish' })),
       ...this.entityManager.kelps.map(k => ({ mesh: k, type: 'kelp', name: 'Abyssal Kelp Forest' })),
       ...this.entityManager.rocks.map(r => ({ mesh: r, type: 'rock', name: 'Volcanic Coral Rock' })),
-      ...this.entityManager.fish.map(f => ({ mesh: f.mesh, type: 'fish', name: 'Abyssal Schooling Fish' }))
+      ...this.entityManager.fish.map(f => ({ mesh: f.mesh, type: 'fish', name: 'Abyssal Schooling Fish' })),
+      ...this.entityManager.sharks.map(s => ({ mesh: s.mesh, type: 'shark', name: 'Abyssal Solitary Shark' }))
     ];
     
     scanables.forEach(obj => {
@@ -508,6 +509,7 @@ class Game {
       if (bestTarget.type === 'kelp') ringScale = 2.0;
       if (bestTarget.type === 'rock') ringScale = 3.0;
       if (bestTarget.type === 'fish') ringScale = 0.8;
+      if (bestTarget.type === 'shark') ringScale = 3.5;
       this.scanRing.scale.setScalar(ringScale + Math.sin(this.time * 5.0) * 0.1);
       this.scanRing.visible = true;
       
