@@ -16,11 +16,10 @@ export class Input {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (e.key in this.keys) this.keys[e.key] = true;
+      const key = e.key.toLowerCase();
+      if (key in this.keys) this.keys[key] = true;
       if (e.key === ' ') this.keys.Space = true;
-      if (e.key === 'c' || e.key === 'C') this.keys.c = true;
-      if (e.key === 'f' || e.key === 'F') this.keys.f = true;
-      if (e.key === 'l' || e.key === 'L') this.game.toggleHeadlight();
+      if (key === 'l') this.game.toggleHeadlight();
 
       // Handle speed gear hotkeys (0, 1, 2, 3)
       if (e.key === '0' || e.key === '1' || e.key === '2' || e.key === '3') {
@@ -30,10 +29,9 @@ export class Input {
     });
 
     window.addEventListener('keyup', (e) => {
-      if (e.key in this.keys) this.keys[e.key] = false;
+      const key = e.key.toLowerCase();
+      if (key in this.keys) this.keys[key] = false;
       if (e.key === ' ') this.keys.Space = false;
-      if (e.key === 'c' || e.key === 'C') this.keys.c = false;
-      if (e.key === 'f' || e.key === 'F') this.keys.f = false;
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -109,6 +107,7 @@ export class Input {
     knob.addEventListener('touchstart', onTouchStart, { passive: false });
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchcancel', onTouchEnd);
 
     // Setup action buttons
     const btnUp = document.getElementById('btn-touch-up');

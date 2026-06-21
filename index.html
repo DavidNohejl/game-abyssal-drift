@@ -42,7 +42,7 @@
 
       <div class="controls-guide">
         <h3>CONTROLS</h3>
-        <div class="controls-grid">
+        <div class="controls-grid desktop-only-controls">
           <div class="control-item">
             <span class="key">W</span> <span class="key">S</span>
             <span class="label">Pitch (Pitch Down / Up)</span>
@@ -58,6 +58,25 @@
           <div class="control-item">
             <span class="key">C</span>
             <span class="label">Move Down (Ballast Flood)</span>
+          </div>
+        </div>
+
+        <div class="touch-only-controls">
+          <div class="control-item-mobile">
+            <span class="mobile-icon">🕹️</span>
+            <span class="label">Drag Left Joystick to Steer (Yaw & Pitch)</span>
+          </div>
+          <div class="control-item-mobile">
+            <span class="mobile-icon">⬆️</span>
+            <span class="label">Hold UP to Ascend (Refill Oxygen at Surface)</span>
+          </div>
+          <div class="control-item-mobile">
+            <span class="mobile-icon">⬇️</span>
+            <span class="label">Hold DOWN to Descend / Undock from Vessel</span>
+          </div>
+          <div class="control-item-mobile">
+            <span class="mobile-icon">🔍</span>
+            <span class="label">Hold SCAN to Classify Marine Objects in Front</span>
           </div>
         </div>
         <div class="mouse-toggle-container">
@@ -233,6 +252,7 @@
       <div class="brand" style="margin-bottom: -10px;">
         <span class="brand-tag">SUBMERSIBLE ARCHIVES</span>
         <h2>SCIENTIFIC DATA LOG</h2>
+        <span id="db-scan-counter" class="db-scan-counter">0 / 5 SPECIES CATALOGUED</span>
       </div>
       
       <div class="db-grid">
@@ -285,6 +305,17 @@
           </div>
           <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
         </div>
+      </div>
+
+      <div class="db-pagination">
+        <div class="db-dots">
+          <span class="db-dot active"></span>
+          <span class="db-dot"></span>
+          <span class="db-dot"></span>
+          <span class="db-dot"></span>
+          <span class="db-dot"></span>
+        </div>
+        <span class="db-swipe-hint">Swipe to browse entries</span>
       </div>
       
       <button id="btn-database-close" class="btn btn-primary" style="margin-top: -10px;">CLOSE ARCHIVES</button>

@@ -721,32 +721,87 @@ input:checked+.slider:before {
   }
 
   #hud {
-    padding: 16px;
+    padding: 8px 10px;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-start;
+    align-content: flex-start;
+  }
+
+  .hud-center {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .hud-center .indicator-group {
+    padding: 6px 10px;
+    gap: 3px;
+  }
+
+  .hud-center .indicator-label-row {
+    font-size: 0.55rem;
+  }
+
+  .hud-center .progress-bar-bg {
+    height: 5px;
   }
 
   .hud-left {
     order: 2;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
   .hud-right {
     order: 3;
   }
 
-  .hud-center {
-    order: 1;
-    max-width: 100%;
-    margin-top: 4px;
+  .hud-stat {
+    min-width: auto;
+    padding: 5px 10px;
+    border-radius: 10px;
+    gap: 0;
   }
 
-  .hud-stat {
-    min-width: 90px;
-    padding: 10px 14px;
+  .hud-label {
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
   }
 
   .hud-value {
-    font-size: 1.3rem;
+    font-size: 0.95rem;
+  }
+
+  .hud-value .unit {
+    font-size: 0.6rem;
+  }
+
+  /* Compact gear selector on mobile */
+  .gear-selector {
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .gear-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    border-radius: 5px;
+  }
+
+  /* Compact HUD buttons */
+  .hud-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .sound-icon {
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -900,6 +955,25 @@ input:checked+.slider:before {
   animation: floatCard 8s ease-in-out infinite;
 }
 
+.db-scan-counter {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--color-primary);
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-top: 6px;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.3);
+}
+
+.db-scan-counter .counter-num {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
 .db-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -979,11 +1053,149 @@ input:checked+.slider:before {
   color: var(--color-text);
 }
 
-/* RESPONSIVE DATABASE MODAL */
+/* RESPONSIVE DATABASE MODAL - Full-screen swipeable cards on mobile */
 @media (max-width: 640px) {
+  #database-modal {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  #database-modal .database-card {
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+    animation: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #database-modal .database-card > .brand {
+    padding: 16px 20px 8px;
+    margin-bottom: 0 !important;
+    flex-shrink: 0;
+  }
+
+  #database-modal .database-card > .brand h2 {
+    font-size: 1.3rem;
+  }
+
+  #database-modal .database-card > .btn {
+    flex-shrink: 0;
+    margin: 8px 20px 16px;
+    border-radius: 12px;
+  }
+
   .db-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 0;
+    margin: 0;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    display: flex;
+    flex-direction: row;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .db-item {
+    flex: 0 0 100%;
+    min-width: 100%;
+    scroll-snap-align: start;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding: 24px 24px;
+    justify-content: center;
+    gap: 16px;
+    box-sizing: border-box;
+  }
+
+  .db-item:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .db-icon {
+    font-size: 2.2rem;
+  }
+
+  .db-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .db-title {
+    font-size: 1.2rem;
+  }
+
+  .db-desc {
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  .db-status {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+}
+
+/* DATABASE PAGINATION (hidden on desktop) */
+.db-pagination {
+  display: none;
+}
+
+.db-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.db-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.db-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.db-swipe-hint {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  animation: pulseHint 2s ease-in-out infinite;
+}
+
+@keyframes pulseHint {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+
+/* Show pagination only on mobile */
+@media (max-width: 640px) {
+  .db-pagination {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 0;
+    flex-shrink: 0;
   }
 }
 
@@ -1180,5 +1392,138 @@ input:checked+.slider:before {
   .touch-action-btn svg {
     width: 16px;
     height: 16px;
+  }
+  
+  /* Mobile UI scaling and layout adjustments */
+  .start-card {
+    padding: 20px 24px !important;
+    gap: 16px !important;
+  }
+  .brand {
+    margin-bottom: 2px;
+  }
+  .brand h1 {
+    font-size: 1.8rem;
+  }
+  .description {
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin-bottom: 4px;
+  }
+  .controls-guide h3, .settings-group h3 {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .end-card h2 {
+    font-size: 1.6rem;
+  }
+  .score-number {
+    font-size: 1.8rem;
+  }
+  .flavor-text {
+    font-size: 0.82rem;
+  }
+  
+  /* Relocate Scanner HUD to the top on mobile to avoid overlapping the joystick/buttons */
+  .scanner-hud {
+    top: 135px; /* Safely sits below wrapped oxygen bar and stats */
+    bottom: auto;
+    padding: 10px 18px;
+    border-radius: 14px;
+    max-width: 300px;
+  }
+  .scanner-target {
+    font-size: 0.95rem;
+  }
+  .scanner-prompt {
+    font-size: 0.72rem;
+  }
+}
+
+/* TOUCH GUIDE STYLES */
+.touch-only-controls {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.control-item-mobile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.control-item-mobile .mobile-icon {
+  font-size: 1.1rem;
+}
+
+.control-item-mobile .label {
+  font-size: 0.8rem;
+  color: var(--color-text);
+  font-weight: 400;
+  margin: 0;
+}
+
+/* DATABASE SCROLLING BOUNDS */
+.database-card {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-grid {
+  overflow-y: auto;
+  max-height: 48vh;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 240, 255, 0.2) rgba(255, 255, 255, 0.02);
+}
+
+.db-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.db-grid::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+
+.db-grid::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.2);
+  border-radius: 3px;
+}
+
+.db-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.4);
+}
+
+/* START CARD OVERFLOW PROTECTION */
+.start-card {
+  max-height: 95vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* media queries touch detection override to show/hide respective start guides */
+@media (hover: none) and (pointer: coarse) {
+  #touch-controls {
+    display: flex;
+  }
+  /* Hide standard mouse checkbox container and keyboard helper guides on mobile */
+  .hud-right .mouse-checkbox-container,
+  .desktop-only-controls,
+  .mouse-toggle-container {
+    display: none !important;
+  }
+  .touch-only-controls {
+    display: flex;
   }
 }

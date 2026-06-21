@@ -79,6 +79,20 @@ export class UI {
     this.dom.btnDatabaseClose.addEventListener('click', () => {
       this.game.toggleDatabaseModal(false);
     });
+
+    // Pagination dots scroll tracking for mobile database modal
+    const dbGrid = document.querySelector('.db-grid');
+    const dbDots = document.querySelectorAll('.db-dot');
+    if (dbGrid && dbDots.length) {
+      dbGrid.addEventListener('scroll', () => {
+        const scrollLeft = dbGrid.scrollLeft;
+        const itemWidth = dbGrid.offsetWidth;
+        const activeIndex = Math.round(scrollLeft / itemWidth);
+        dbDots.forEach((dot, i) => {
+          dot.classList.toggle('active', i === activeIndex);
+        });
+      });
+    }
   }
 
   updateGearUI(gear) {
@@ -231,6 +245,14 @@ export class UI {
         statusEl.className = "db-status status-locked";
         descEl.innerText = "Scan target in the ocean depths to unlock scientific readouts.";
       }
+    }
+
+    // Update scan counter
+    const total = Object.keys(database).length;
+    const scanned = Object.values(database).filter(v => v).length;
+    const counterEl = document.getElementById('db-scan-counter');
+    if (counterEl) {
+      counterEl.innerHTML = `<span class="counter-num">${scanned}</span> / <span class="counter-num">${total}</span> SPECIES CATALOGUED`;
     }
   }
 
