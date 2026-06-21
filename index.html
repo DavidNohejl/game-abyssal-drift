@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abyssal Drift - 3D Ocean Swimming Odyssey</title>
+  <meta name="description" content="Embark on a beautiful 3D underwater journey as a sea turtle. Collect pearls, dodge jellyfish, and explore the depths of the ocean.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Three.js and Addons via Importmaps -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.152.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.152.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- WebGL Render Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Ambient background glow behind UI -->
+  <div class="vignette"></div>
+
+  <!-- START GAME SCREEN -->
+  <div id="start-screen" class="overlay active">
+    <div class="glass-card start-card">
+      <div class="brand">
+        <span class="brand-tag">3D SUBMERSIBLE SIMULATOR</span>
+        <h1>ABYSSAL DRIFT</h1>
+      </div>
+      
+      <p class="description">
+        Dive into the tranquil, deep blue ocean. Pilot a high-tech deep-sea submarine, collect glowing pearl bubbles, and explore the marine abyss. Watch your oxygen levels and avoid stinging deep-sea jellyfish!
+      </p>
+
+      <div class="controls-guide">
+        <h3>CONTROLS</h3>
+        <div class="controls-grid">
+          <div class="control-item">
+            <span class="key">W</span> <span class="key">S</span>
+            <span class="label">Pitch (Pitch Down / Up)</span>
+          </div>
+          <div class="control-item">
+            <span class="key">A</span> <span class="key">D</span>
+            <span class="label">Yaw (Steer Left / Right)</span>
+          </div>
+          <div class="control-item">
+            <span class="key">Space</span>
+            <span class="label">Move Up (Ballast Blow)</span>
+          </div>
+          <div class="control-item">
+            <span class="key">C</span>
+            <span class="label">Move Down (Ballast Flood)</span>
+          </div>
+        </div>
+        <div class="mouse-toggle-container">
+          <label class="switch">
+            <input type="checkbox" id="mouse-control-checkbox">
+            <span class="slider round"></span>
+          </label>
+          <span class="toggle-label">Enable Mouse Control (Steer with Cursor)</span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3>GRADIENT VISUALS</h3>
+        <div class="btn-group" role="group" aria-label="Graphics Quality Selector">
+          <button id="btn-graphics-low" class="btn btn-secondary">Low</button>
+          <button id="btn-graphics-high" class="btn btn-secondary active">High (God Rays & Shadows)</button>
+        </div>
+      </div>
+
+      <button id="btn-start" class="btn btn-primary btn-glow">DIVE IN</button>
+    </div>
+  </div>
+
+  <!-- HEADS UP DISPLAY (HUD) -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <div class="hud-stat">
+        <span class="hud-label">DEPTH</span>
+        <span id="stat-depth" class="hud-value">0<span class="unit">m</span></span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">PEARLS</span>
+        <span id="stat-score" class="hud-value">0</span>
+      </div>
+      <div class="hud-stat" id="hud-stat-vessel">
+        <span class="hud-label">VESSEL DIST</span>
+        <span id="stat-vessel" class="hud-value">0<span class="unit">m</span></span>
+      </div>
+      <div class="hud-stat">
+        <span class="hud-label">ENGINE GEAR</span>
+        <div id="gear-selector" class="gear-selector">
+          <button class="gear-btn" data-gear="0">0</button>
+          <button class="gear-btn" data-gear="1">1</button>
+          <button class="gear-btn active" data-gear="2">2</button>
+          <button class="gear-btn" data-gear="3">3</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-center">
+      <!-- Oxygen Indicator -->
+      <div class="indicator-group">
+        <div class="indicator-label-row">
+          <span>OXYGEN</span>
+          <span id="text-oxygen">100%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="bar-oxygen" class="progress-bar o2-glow" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <button id="btn-database-toggle" class="hud-btn" style="margin-right: 12px;" aria-label="Open Database">
+        <svg class="sound-icon" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M19 19H5V5H19V19M6 17H18V15H6V17M6 13H18V11H6V13M6 9H18V7H6V9Z" />
+        </svg>
+      </button>
+      <button id="btn-lights-toggle" class="hud-btn" style="margin-right: 12px;" aria-label="Toggle Headlight">
+        <svg class="sound-icon lights-on" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12,2A7,7 0 0,0 5,9C5,11.38 6.08,13.5 7.78,14.9C8.92,15.86 9.6,17.27 9.6,18.78V19A2,2 0 0,0 11.6,21H12.4A2,2 0 0,0 14.4,19V18.78C14.4,17.27 15.08,15.86 16.22,14.9C17.92,13.5 19,11.38 19,9A7,7 0 0,0 12,2M9,21A1,1 0 0,0 10,22H14A1,1 0 0,0 15,21H9Z" />
+        </svg>
+        <svg class="sound-icon lights-off hidden" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M2,4.27L3.27,3L21,20.73L19.73,22L15.35,17.62C14.44,18.5 13.5,19 12,19V21H10V19C8,19 6.5,17.5 6.5,15.5H8.5C8.5,16.5 9.5,17 11,17V13.27L4.7,6.97C4.18,7.9 3.9,9 3.9,10.2A8,8 0 0,0 11.9,18.2C11.9,18.2 12,18.2 12,18.2V14.27L2,4.27M12,5.2V7.2C13.5,7.2 14.5,7.7 14.5,8.7H16.5C16.5,6.7 15,5.2 13,5.2V3.2H11V5.2M20.1,10.2C20.1,8.3 19.3,6.5 18,5.2L16.6,6.6C17.5,7.5 18.1,8.8 18.1,10.2C18.1,11.5 17.6,12.8 16.7,13.7L18.1,15.1C19.4,13.8 20.1,12.1 20.1,10.2M12,1.2C6.5,1.2 2.1,5.6 2.1,11.2C2.1,12.2 2.3,13.2 2.6,14.2L4.2,12.6C4.1,12.1 4.1,11.7 4.1,11.2C4.1,6.8 7.6,3.2 12,3.2C12.5,3.2 12.9,3.2 13.4,3.3L15,1.7C14,1.4 13,1.2 12,1.2Z" />
+        </svg>
+      </button>
+      <button id="btn-sound-toggle" class="hud-btn" aria-label="Toggle Sound">
+        <svg class="sound-icon sound-on" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+        </svg>
+        <svg class="sound-icon sound-off hidden" viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M12,4L7,9H3V15H7L12,20V4M16.5,12C16.5,10.23 15.5,8.71 14,7.97V11L16.43,13.43C16.47,12.96 16.5,12.47 16.5,12M19,12C19,12.93 18.83,13.82 18.53,14.65L20.04,16.16C20.65,14.9 21,13.5 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M4.27,3L3,4.27L7.73,9H3V15H7L12,20V13.27L16.25,17.52C15.58,18.04 14.83,18.45 14,18.7V20.76C15.38,20.44 16.63,19.78 17.67,18.94L20,21.27L21.27,20L4.27,3Z" />
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Sonar Radar Widget (Bottom-Right) -->
+    <div id="sonar-container" class="sonar-container">
+      <canvas id="sonar-canvas" width="130" height="130"></canvas>
+    </div>
+  </div>
+
+  <!-- GAME OVER / RECOVERY SCREEN -->
+  <div id="game-over-screen" class="overlay hidden">
+    <div class="glass-card end-card">
+      <div class="brand">
+        <span class="brand-tag error-tag">OXYGEN DEPLETED</span>
+        <h2>SURFACING REQUIRED</h2>
+      </div>
+
+      <div class="scores-panel">
+        <div class="score-box">
+          <span class="score-label">Pearls Gathered</span>
+          <span id="final-score" class="score-number">0</span>
+        </div>
+        <div class="score-box">
+          <span class="score-label">Max Depth Reached</span>
+          <span id="final-depth" class="score-number">0m</span>
+        </div>
+      </div>
+
+      <p class="flavor-text">
+        The power cells are drained, and life support is offline. Your submarine must surface to recharge batteries and replenish oxygen.
+      </p>
+
+      <button id="btn-restart" class="btn btn-primary btn-glow">SWIM AGAIN</button>
+    </div>
+  </div>
+
+  <!-- SURFACING BANNER EFFECT -->
+  <div id="surface-banner" class="banner hidden">
+    <div class="banner-content">
+      <span>AIR REFILLED</span>
+    </div>
+  </div>
+
+  <!-- DAMAGE FLASH EFFECT -->
+  <div id="damage-flash" class="flash-overlay"></div>
+
+  <!-- OBJECT SCANNER HUD -->
+  <div id="scanner-hud" class="scanner-hud hidden">
+    <div class="scanner-info">
+      <span id="scanner-tag" class="scanner-tag">SCANNER LOCK</span>
+      <h4 id="scanner-target-name" class="scanner-target">Target: Bioluminescent Pearl</h4>
+      <span id="scanner-target-dist" class="scanner-dist">Range: 14.5m</span>
+      <div id="scanner-progress-container" class="scanner-progress-container hidden">
+        <span class="progress-label">ANALYZING GEOMETRY</span>
+        <div class="progress-bar-bg" style="height: 6px;">
+          <div id="scanner-progress-bar" class="progress-bar scan-glow" style="width: 0%;"></div>
+        </div>
+      </div>
+      <span id="scanner-prompt" class="scanner-prompt">Hold [F] to scan</span>
+      <span id="scanner-target-info" class="scanner-target-info hidden">Yields 18% Oxygen on capture.</span>
+    </div>
+  </div>
+
+  <!-- SCIENTIFIC DATABASE ARCHIVES MODAL -->
+  <div id="database-modal" class="overlay hidden">
+    <div class="glass-card database-card">
+      <div class="brand" style="margin-bottom: -10px;">
+        <span class="brand-tag">SUBMERSIBLE ARCHIVES</span>
+        <h2>SCIENTIFIC DATA LOG</h2>
+      </div>
+      
+      <div class="db-grid">
+        <!-- Pearl -->
+        <div class="db-item" id="db-item-pearl">
+          <div class="db-header">
+            <span class="db-icon">💎</span>
+            <h3 class="db-title">Bioluminescent Pearl</h3>
+            <span class="db-status status-locked">LOCKED</span>
+          </div>
+          <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
+        </div>
+        
+        <!-- Jellyfish -->
+        <div class="db-item" id="db-item-jellyfish">
+          <div class="db-header">
+            <span class="db-icon">👾</span>
+            <h3 class="db-title">Abyssal Jellyfish</h3>
+            <span class="db-status status-locked">LOCKED</span>
+          </div>
+          <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
+        </div>
+        
+        <!-- Kelp -->
+        <div class="db-item" id="db-item-kelp">
+          <div class="db-header">
+            <span class="db-icon">🌿</span>
+            <h3 class="db-title">Abyssal Kelp Forest</h3>
+            <span class="db-status status-locked">LOCKED</span>
+          </div>
+          <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
+        </div>
+        
+        <!-- Rock/Coral -->
+        <div class="db-item" id="db-item-rock">
+          <div class="db-header">
+            <span class="db-icon">🌋</span>
+            <h3 class="db-title">Volcanic Coral Rock</h3>
+            <span class="db-status status-locked">LOCKED</span>
+          </div>
+          <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
+        </div>
+        
+        <!-- Schooling Fish -->
+        <div class="db-item" id="db-item-fish">
+          <div class="db-header">
+            <span class="db-icon">🐟</span>
+            <h3 class="db-title">Abyssal Schooling Fish</h3>
+            <span class="db-status status-locked">LOCKED</span>
+          </div>
+          <p class="db-desc">Scan target in the ocean depths to unlock scientific readouts.</p>
+        </div>
+      </div>
+      
+      <button id="btn-database-close" class="btn btn-primary" style="margin-top: -10px;">CLOSE ARCHIVES</button>
+    </div>
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script type="module" src="audio.js"></script>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
