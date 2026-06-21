@@ -927,6 +927,29 @@ input:checked+.slider:before {
   }
 }
 
+.scanner-tag.warning {
+  color: var(--color-danger) !important;
+  text-shadow: 0 0 15px var(--color-danger-glow) !important;
+  animation: pulseWarning 0.6s ease-in-out infinite alternate;
+}
+
+.scanner-target-info.warning {
+  color: var(--color-danger) !important;
+  border-top-color: rgba(255, 51, 102, 0.25) !important;
+}
+
+@keyframes pulseWarning {
+  0% {
+    opacity: 0.6;
+    text-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 18px rgba(255, 51, 102, 0.85);
+  }
+}
+
+
 .scanner-progress-container {
   display: flex;
   flex-direction: column;

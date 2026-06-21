@@ -28,6 +28,7 @@ export class Player {
       autopilot: false // unlocked or not
     };
     this.autopilotActive = false;
+    this.autopilotStatus = "OFFLINE";
     
     // Bubble Pool for exhaust bubbles
     this.bubblePool = [];
@@ -388,6 +389,7 @@ export class Player {
     
     let pitchInput = 0;
     let yawInput = 0;
+    let heaveInput = 0;
     
     // Check for manual steering to override autopilot
     const hasSteeringInput = 
@@ -404,25 +406,99 @@ export class Player {
     }
     
     if (this.autopilotActive) {
-      const targetPos = new THREE.Vector3(0, -2.2, 0);
-      const toTarget = targetPos.clone().sub(sub.position);
-      const dist = toTarget.length();
+      const vesselDockPos = new THREE.Vector3(0, -1.2, 0);
+      const horizontalDist = Math.sqrt(sub.position.x * sub.position.x + sub.position.z * sub.position.z);
+      const transitY = -5.0; // safe depth clearing all peaks
       
-      if (dist < 4.5) {
-        this.autopilotActive = false;
+      let targetPos = new THREE.Vector3();
+      let desiredPitch = null;
+      
+      // 1. Determine base phase target
+      if (sub.position.y < -6.5 && horizontalDist > 8.0) {
+        this.autopilotStatus = "ASCENDING TO SAFE TRANSIT DEPTH (-5M)";
+        targetPos.set(sub.position.x * 0.9, transitY, sub.position.z * 0.9);
+      } else if (horizontalDist > 5.5) {
+        this.autopilotStatus = "CRUISING TO MOTHER SHIP COORDINATES";
+        targetPos.set(0, transitY, 0);
       } else {
-        const localTarget = toTarget.clone().applyQuaternion(sub.quaternion.clone().invert()).normalize();
-        
-        yawInput = -localTarget.x * 3.5;
-        yawInput = Math.max(-1.6, Math.min(1.6, yawInput));
-        
-        pitchInput = -localTarget.y * 3.5;
-        pitchInput = Math.max(-1.8, Math.min(1.8, pitchInput));
-        
-        // Force forward speed if stopped
-        if (this.selectedGear === 0) {
-          this.selectedGear = 2;
+        this.autopilotStatus = "DESCENDING TO DOCKING PORT";
+        targetPos.copy(vesselDockPos);
+        desiredPitch = 0; // Force level pitch during docking alignment to prevent loops/spinning
+      }
+
+      // 2. Predictive terrain height lookahead for collision avoidance
+      let maxTerrainAhead = -999;
+      const toTargetH = new THREE.Vector3(targetPos.x - sub.position.x, 0, targetPos.z - sub.position.z);
+      const distH = toTargetH.length();
+      if (distH > 0.1) {
+        const dirH = toTargetH.clone().normalize();
+        const checkDistances = [4, 8, 12, 16];
+        for (const d of checkDistances) {
+          if (d < distH) {
+            const px = sub.position.x + dirH.x * d;
+            const pz = sub.position.z + dirH.z * d;
+            const tHeight = environment.getTerrainHeight(px, pz);
+            if (tHeight > maxTerrainAhead) {
+              maxTerrainAhead = tHeight;
+            }
+          }
         }
+      }
+
+      // If upcoming terrain is too close to our height, engage obstacle avoidance mode
+      if (maxTerrainAhead > -900 && sub.position.y < maxTerrainAhead + 7.5) {
+        targetPos.y = maxTerrainAhead + 8.5;
+        this.autopilotStatus = "COLLISION WARNING: AVOIDING OBSTACLE";
+      }
+      
+      // 3. Proportional yaw steering using local horizontal target
+      const distH = toTargetH.length();
+      if (distH < 0.1) {
+        yawInput = 0;
+      } else {
+        const localTargetH = toTargetH.clone().applyQuaternion(sub.quaternion.clone().invert()).normalize();
+        if (localTargetH.z < 0) {
+          // Target is behind, turn around in the shortest direction
+          yawInput = localTargetH.x >= 0 ? -1.6 : 1.6;
+        } else {
+          yawInput = -localTargetH.x * 4.0;
+          yawInput = Math.max(-1.6, Math.min(1.6, yawInput));
+        }
+      }
+      
+      // 4. Proportional pitch steering (stabilize to level if close to target depth)
+      const currentPitch = Math.asin(forward.y);
+      if (desiredPitch === null) {
+        const yDiff = targetPos.y - sub.position.y;
+        if (Math.abs(yDiff) > 2.0) {
+          desiredPitch = Math.max(-0.44, Math.min(0.44, yDiff * 0.05)); // Cap pitch up/down to 25 degrees
+        } else {
+          desiredPitch = 0; // Maintain level pitch close to depth target
+        }
+      }
+      
+      pitchInput = -(desiredPitch - currentPitch) * 4.0;
+      pitchInput = Math.max(-1.8, Math.min(1.8, pitchInput));
+      
+      // 5. Deceleration based on distance from mothership
+      if (horizontalDist > 40.0) {
+        this.selectedGear = 3; // Fast transit
+      } else if (horizontalDist > 15.0) {
+        this.selectedGear = 2; // Cruise
+      } else {
+        this.selectedGear = 1; // Slow docking approach
+      }
+
+      // 6. Active vertical heave thrust
+      const speedMult = 1.0 + (this.upgrades.speed || 0) * 0.15;
+      const heaveSpeedMap = { 0: 2.0, 1: 3.0, 2: 5.0, 3: 7.0 };
+      const heaveSpeed = heaveSpeedMap[this.selectedGear] * speedMult;
+
+      if (this.autopilotStatus === "COLLISION WARNING: AVOIDING OBSTACLE" || this.autopilotStatus.startsWith("ASCENDING") || targetPos.y > sub.position.y + 1.0) {
+        heaveInput = heaveSpeed * 1.5; // Climb steep & fast
+      } else if (this.autopilotStatus === "DESCENDING TO DOCKING PORT" || targetPos.y < sub.position.y - 1.0) {
+        const yDiff = targetPos.y - sub.position.y;
+        heaveInput = Math.max(-heaveSpeed * 0.8, Math.min(heaveSpeed * 0.8, yDiff * 1.5));
       }
     } else {
       // Normal Input Steer handling
@@ -462,7 +538,6 @@ export class Player {
     // VERTICAL HEAVE CONTROL (Space to go Up, C to go Down)
     const heaveSpeedMap = { 0: 2.0, 1: 3.0, 2: 5.0, 3: 7.0 };
     const heaveSpeed = heaveSpeedMap[this.selectedGear] * speedMult;
-    let heaveInput = 0;
     if (!this.autopilotActive) {
       if (input.keys.Space) heaveInput += heaveSpeed;
       if (input.keys.c) heaveInput -= heaveSpeed;

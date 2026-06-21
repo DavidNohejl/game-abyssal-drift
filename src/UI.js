@@ -27,6 +27,8 @@ export class UI {
       finalScore: document.getElementById('final-score'),
       finalDepth: document.getElementById('final-depth'),
       gearSelector: document.getElementById('gear-selector'),
+      btnMenuToggle: document.getElementById('btn-menu-toggle'),
+      btnResetProgress: document.getElementById('btn-reset-progress'),
       btnDatabaseToggle: document.getElementById('btn-database-toggle'),
       btnLightsToggle: document.getElementById('btn-lights-toggle'),
       btnDatabaseClose: document.getElementById('btn-database-close'),
@@ -62,7 +64,7 @@ export class UI {
   // Bind HUD buttons, keyboard inputs, mouse controls, resize handlers
   setupEvents() {
     // Game start controls
-    this.dom.btnStart.addEventListener('click', () => this.game.startGame());
+    this.dom.btnStart.addEventListener('click', () => this.game.handleStartButtonClick());
     this.dom.btnRestart.addEventListener('click', () => this.game.startGame());
     
     // Graphics setting buttons
@@ -90,6 +92,23 @@ export class UI {
     this.dom.btnDatabaseClose.addEventListener('click', () => {
       this.game.toggleDatabaseModal(false);
     });
+
+    if (this.dom.btnMenuToggle) {
+      this.dom.btnMenuToggle.addEventListener('click', () => {
+        if (this.game.state === 'PLAYING') {
+          this.game.goToMainMenu();
+        } else if (this.game.state === 'MENU') {
+          this.game.resumeGame();
+        }
+      });
+    }
+    if (this.dom.btnResetProgress) {
+      this.dom.btnResetProgress.addEventListener('click', () => {
+        if (confirm("Are you sure you want to reset all upgrades and archives? This will clear your save and start a fresh game.")) {
+          this.game.resetAllProgress();
+        }
+      });
+    }
 
     // Research Modal buttons
     this.dom.btnResearchClose.addEventListener('click', () => {
@@ -173,6 +192,20 @@ export class UI {
     this.dom.hud.classList.remove('hidden');
   }
 
+  showMainMenu() {
+    this.dom.hud.classList.add('hidden');
+    this.dom.gameOverScreen.classList.add('hidden');
+    this.dom.databaseModal.classList.add('hidden');
+    this.dom.researchModal.classList.add('hidden');
+    this.dom.startScreen.classList.remove('hidden');
+  }
+
+  updateStartButton(gameHasStarted) {
+    if (this.dom.btnStart) {
+      this.dom.btnStart.innerText = gameHasStarted ? "RESUME DIVE" : "DIVE IN";
+    }
+  }
+
   showGameOver(score, maxDepth) {
     // Display end card
     this.dom.hud.classList.add('hidden');
@@ -198,6 +231,36 @@ export class UI {
   }
 
   showScannerHUD(targetName, distance, scanProgress, isScanned, targetType) {
+    if (targetType === 'autopilot') {
+      const isWarning = targetName.includes("WARNING");
+      if (isWarning) {
+        this.dom.scannerTag.innerText = "COLLISION WARNING";
+        this.dom.scannerTag.classList.add('warning');
+        this.dom.scannerTargetInfo.classList.add('warning');
+      } else {
+        this.dom.scannerTag.innerText = "AUTOPILOT NAV";
+        this.dom.scannerTag.classList.remove('warning');
+        this.dom.scannerTargetInfo.classList.remove('warning');
+        this.dom.scannerTag.style.textShadow = "var(--shadow-neon-secondary)";
+        this.dom.scannerTag.style.color = "var(--color-secondary)";
+      }
+      
+      this.dom.scannerTargetName.innerText = "System: Homing Navigation";
+      this.dom.scannerTargetDist.innerText = "Range to Base: " + distance.toFixed(1) + "m";
+      
+      this.dom.scannerProgressContainer.classList.add('hidden');
+      this.dom.scannerPrompt.classList.add('hidden');
+      
+      this.dom.scannerTargetInfo.innerText = targetName; // status string
+      this.dom.scannerTargetInfo.classList.remove('hidden');
+      
+      this.dom.scannerHud.classList.remove('hidden');
+      return;
+    }
+
+    this.dom.scannerTag.classList.remove('warning');
+    this.dom.scannerTargetInfo.classList.remove('warning');
+
     this.dom.scannerTargetName.innerText = "Target: " + targetName;
     this.dom.scannerTargetDist.innerText = "Range: " + distance.toFixed(1) + "m";
     

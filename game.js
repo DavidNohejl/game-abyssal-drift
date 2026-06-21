@@ -19,6 +19,7 @@ class Game {
     this.state = STATE_MENU;
     this.graphicsHigh = true;
     this.time = 0;
+    this.gameHasStarted = false;
     
     // Scientific Database persistent state
     this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
@@ -277,6 +278,60 @@ class Game {
     }
   }
 
+  goToMainMenu() {
+    this.player.autopilotActive = false;
+    this.ui.updateAutopilotUI(false);
+    this.state = STATE_MENU;
+    this.ui.showMainMenu();
+  }
+
+  resumeGame() {
+    if (!this.gameHasStarted) return;
+    this.state = STATE_PLAYING;
+    this.ui.showHUD();
+  }
+
+  handleStartButtonClick() {
+    if (this.gameHasStarted) {
+      this.resumeGame();
+    } else {
+      this.startGame();
+    }
+  }
+
+  resetAllProgress() {
+    // Clear permanent saves
+    localStorage.removeItem('abyssal_drift_db');
+    localStorage.removeItem('abyssal_drift_upgrades');
+    
+    // Reset internal structures
+    this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false };
+    this.upgrades = { speed: 0, oxygen: 0, autopilot: false };
+    
+    // Sync to player logic
+    this.player.upgrades = this.upgrades;
+    this.player.reset();
+    
+    // Respawn all entities & mother ship vessel
+    this.entityManager.spawnEntities((x, z) => this.environment.getTerrainHeight(x, z));
+    this.entityManager.spawnVessel();
+    
+    // Reset game state trackers
+    this.gameHasStarted = true;
+    this.state = STATE_PLAYING;
+    
+    // Update UI elements
+    this.ui.updateStartButton(true);
+    this.ui.showHUD();
+    this.ui.renderDatabase(this.database);
+    this.ui.renderResearch(this.upgrades, this.player.score);
+    this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score);
+    
+    // Direct visual feedback
+    this.ui.triggerSurfaceBanner("PROGRESS RESET & FRESH START");
+    audio.playStart();
+  }
+
   toggleHeadlight() {
     if (this.state !== STATE_PLAYING) return;
     this.headlightOn = !this.headlightOn;
@@ -289,6 +344,8 @@ class Game {
     audio.init();
     
     this.state = STATE_PLAYING;
+    this.gameHasStarted = true;
+    this.ui.updateStartButton(true);
     this.player.reset();
     this.player.upgrades = this.upgrades; // sync loaded upgrades to player
     this.headlightOn = true;
@@ -318,6 +375,8 @@ class Game {
 
   gameOver() {
     this.state = STATE_GAMEOVER;
+    this.gameHasStarted = false;
+    this.ui.updateStartButton(false);
     audio.playGameOver();
     this.ui.showGameOver(this.player.score, this.player.maxDepth);
     
@@ -398,6 +457,19 @@ class Game {
 
   updateScanner(delta) {
     const subPos = this.player.mesh.position;
+    
+    // Autopilot Nav HUD Override
+    if (this.player.autopilotActive) {
+      this.scanRing.visible = false;
+      this.scanLaser.visible = false;
+      this.scanProgress = 0;
+      
+      const vesselDockPos = new THREE.Vector3(0, -1.2, 0);
+      const dist = subPos.distanceTo(vesselDockPos);
+      this.ui.showScannerHUD(this.player.autopilotStatus, dist, 0, true, 'autopilot');
+      return;
+    }
+    
     const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.mesh.quaternion);
     
     let bestTarget = null;

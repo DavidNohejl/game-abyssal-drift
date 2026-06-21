@@ -21,6 +21,14 @@ export class Input {
       if (e.key === ' ') this.keys.Space = true;
       if (key === 'l') this.game.toggleHeadlight();
       if (key === 'u') this.game.toggleAutopilot();
+      
+      if (e.key === 'Escape') {
+        if (this.game.state === 'PLAYING') {
+          this.game.goToMainMenu();
+        } else if (this.game.state === 'MENU') {
+          this.game.resumeGame();
+        }
+      }
 
       // Handle speed gear hotkeys (0, 1, 2, 3)
       if (e.key === '0' || e.key === '1' || e.key === '2' || e.key === '3') {
