@@ -35,14 +35,16 @@
   -webkit-user-select: none;
 }
 
-html, body {
+html,
+body {
   background-color: var(--bg-dark);
   color: var(--color-text);
   font-family: var(--font-body);
   overflow: hidden;
   width: 100vw;
   height: 100vh;
-  touch-action: none; /* Prevent default panning and zooming gestures */
+  touch-action: none;
+  /* Prevent default panning and zooming gestures */
 }
 
 h1,
@@ -943,6 +945,7 @@ input:checked+.slider:before {
     opacity: 0.6;
     text-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
   }
+
   100% {
     opacity: 1;
     text-shadow: 0 0 18px rgba(255, 51, 102, 0.85);
@@ -1096,17 +1099,17 @@ input:checked+.slider:before {
     flex-direction: column;
   }
 
-  #database-modal .database-card > .brand {
+  #database-modal .database-card>.brand {
     padding: 16px 20px 8px;
     margin-bottom: 0 !important;
     flex-shrink: 0;
   }
 
-  #database-modal .database-card > .brand h2 {
+  #database-modal .database-card>.brand h2 {
     font-size: 1.3rem;
   }
 
-  #database-modal .database-card > .btn {
+  #database-modal .database-card>.btn {
     flex-shrink: 0;
     margin: 8px 20px 16px;
     border-radius: 12px;
@@ -1206,8 +1209,15 @@ input:checked+.slider:before {
 }
 
 @keyframes pulseHint {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* BASE RESEARCH LAB MODAL */
@@ -1335,8 +1345,15 @@ input:checked+.slider:before {
 }
 
 @keyframes pulseAutopilot {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 /* Responsive upgrades tree on mobile */
@@ -1345,6 +1362,7 @@ input:checked+.slider:before {
     padding: 0;
     align-items: stretch;
   }
+
   #research-modal .research-card {
     max-width: 100%;
     width: 100%;
@@ -1359,6 +1377,7 @@ input:checked+.slider:before {
     justify-content: space-between;
     box-sizing: border-box;
   }
+
   .research-grid {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -1367,6 +1386,7 @@ input:checked+.slider:before {
     margin: 10px 0;
     padding-right: 4px;
   }
+
   .research-item {
     padding: 12px;
     gap: 8px;
@@ -1375,15 +1395,18 @@ input:checked+.slider:before {
     flex-wrap: wrap;
     align-items: center;
   }
+
   .research-header {
     width: 100%;
     justify-content: space-between;
   }
+
   .research-desc {
     width: 100%;
     min-height: auto;
     font-size: 0.75rem;
   }
+
   .btn-upgrade {
     padding: 8px 12px;
     font-size: 0.75rem;
@@ -1424,15 +1447,15 @@ input:checked+.slider:before {
 
 @media (max-width: 640px) {
   .sonar-container {
-    width: 100px;
-    height: 100px;
+    width: 85px;
+    height: 85px;
     bottom: 16px;
     right: 16px;
   }
 
   .sonar-container canvas {
-    width: 92px;
-    height: 92px;
+    width: 77px;
+    height: 77px;
   }
 }
 
@@ -1443,14 +1466,28 @@ input:checked+.slider:before {
   left: 24px;
   right: 24px;
   height: 160px;
-  display: none; /* hidden by default, shown via CSS/JS on touch devices */
+  display: none;
+  /* hidden by default, shown via CSS/JS on touch devices */
   justify-content: space-between;
-  align-items: flex-end;
-  pointer-events: none !important; /* Override #hud>div auto settings */
+  align-items: center;
+  /* Centered vertically */
+  pointer-events: none !important;
+  /* Override #hud>div auto settings */
   z-index: 100;
 }
 
+.touch-side-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  pointer-events: auto;
+}
+
 #joystick-zone {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   width: 140px;
   height: 140px;
   display: flex;
@@ -1485,19 +1522,43 @@ input:checked+.slider:before {
 }
 
 #touch-action-buttons {
+  flex: 1;
   display: flex;
-  gap: 16px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
   pointer-events: auto;
-  margin-right: 150px; /* leaves room for the sonar container */
+  margin-right: 150px;
+  /* leaves room for the sonar container */
+}
+
+.vertical-touch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scan-pulse-btn {
+  width: 72px;
+  height: 72px;
+
+}
+
+.compact-btn {
+  width: 72px;
+  height: 32px;
+  border-radius: 8px !important;
+  flex-direction: row !important;
+  /* Horizontal icon & text */
+  gap: 6px !important;
+  font-size: 0.6rem !important;
+  padding: 0 8px;
 }
 
 .touch-action-btn {
-  width: 72px;
-  height: 72px;
-  border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
   border: 1.5px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(8px);
   color: var(--color-text-dim);
   display: flex;
@@ -1537,11 +1598,13 @@ input:checked+.slider:before {
   box-shadow: 0 0 15px var(--color-secondary-glow);
 }
 
-/* Enable touch controls on touch screens */
-@media (hover: none) and (pointer: coarse) {
+/* Enable touch controls on touch screens OR small screen viewports */
+@media (hover: none) and (pointer: coarse),
+(max-width: 640px) {
   #touch-controls {
     display: flex;
   }
+
   /* Hide standard mouse checkbox container on mobile */
   .hud-right .mouse-checkbox-container {
     display: none !important;
@@ -1555,78 +1618,109 @@ input:checked+.slider:before {
     right: 16px;
     height: 110px;
   }
+
   #joystick-zone {
-    width: 100px;
-    height: 100px;
-  }
-  #joystick-base {
     width: 90px;
     height: 90px;
   }
-  #joystick-knob {
-    width: 38px;
-    height: 38px;
-    left: 26px;
-    top: 26px;
+
+  #joystick-base {
+    width: 80px;
+    height: 80px;
   }
+
+  #joystick-knob {
+    width: 34px;
+    height: 34px;
+    left: 23px;
+    top: 23px;
+  }
+
   #touch-action-buttons {
     gap: 8px;
-    margin-right: 110px; /* leaves room for the smaller mobile sonar */
+    margin-right: 95px;
+    /* leaves room for the smaller mobile sonar */
   }
-  .touch-action-btn {
+
+  .scan-pulse-btn {
     width: 52px;
     height: 52px;
-    border-radius: 12px;
-    font-size: 0.55rem;
-    gap: 2px;
+    margin: 10px;
+    border-radius: 16px;
   }
-  .touch-action-btn svg {
-    width: 16px;
-    height: 16px;
+
+  .vertical-touch-stack {
+    gap: 6px;
   }
-  
+
+  .compact-btn {
+    width: 52px;
+    height: 23px;
+    border-radius: 6px !important;
+    padding: 0;
+  }
+
+  .compact-btn span {
+    display: none !important;
+  }
+
+  .compact-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
   /* Mobile UI scaling and layout adjustments */
   .start-card {
     padding: 20px 24px !important;
     gap: 16px !important;
   }
+
   .brand {
     margin-bottom: 2px;
   }
+
   .brand h1 {
     font-size: 1.8rem;
   }
+
   .description {
     font-size: 0.78rem;
     line-height: 1.45;
     margin-bottom: 4px;
   }
-  .controls-guide h3, .settings-group h3 {
+
+  .controls-guide h3,
+  .settings-group h3 {
     font-size: 0.75rem;
     margin-bottom: 6px;
   }
-  
+
   .end-card h2 {
     font-size: 1.6rem;
   }
+
   .score-number {
     font-size: 1.8rem;
   }
+
   .flavor-text {
     font-size: 0.82rem;
   }
-  
+
   /* Relocate Scanner HUD to the top on mobile to avoid overlapping the joystick/buttons */
   .scanner-hud {
-    top: 135px; /* Safely sits below wrapped oxygen bar and stats */
+    top: 135px;
+    /* Safely sits below wrapped oxygen bar and stats */
     bottom: auto;
     padding: 10px 18px;
     border-radius: 14px;
     max-width: 300px;
   }
+
   .scanner-target {
     font-size: 0.95rem;
   }
+
   .scanner-prompt {
     font-size: 0.72rem;
   }
@@ -1704,16 +1798,19 @@ input:checked+.slider:before {
 }
 
 /* media queries touch detection override to show/hide respective start guides */
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse),
+(max-width: 640px) {
   #touch-controls {
     display: flex;
   }
+
   /* Hide standard mouse checkbox container and keyboard helper guides on mobile */
   .hud-right .mouse-checkbox-container,
   .desktop-only-controls,
   .mouse-toggle-container {
     display: none !important;
   }
+
   .touch-only-controls {
     display: flex;
   }
