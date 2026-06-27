@@ -1990,6 +1990,75 @@ input:checked+.slider:before {
   background: rgba(0, 240, 255, 0.4);
 }
 
+/* EXPANDABLE MENU SECTIONS */
+.expandable-menu-section {
+  width: 100%;
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.expandable-menu-section[open] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.05);
+}
+
+.expandable-menu-section summary {
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  user-select: none;
+  list-style: none; /* Hide default browser marker */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.05em;
+  font-family: var(--font-title);
+  outline: none;
+}
+
+.expandable-menu-section summary::-webkit-details-marker {
+  display: none; /* Hide default Webkit marker */
+}
+
+/* Custom interactive expand indicator icon */
+.expandable-menu-section summary::after {
+  content: "＋";
+  font-size: 0.85rem;
+  color: var(--color-primary);
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+.expandable-menu-section[open] summary::after {
+  content: "－";
+  color: var(--color-danger);
+}
+
+.expandable-content {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Advanced settings details specific adjustments */
+.expandable-content .settings-group {
+  margin-top: 10px;
+}
+
+.expandable-content .mouse-toggle-container {
+  margin-top: 10px;
+}
+
 /* START CARD OVERFLOW PROTECTION */
 .start-card {
   max-height: 95vh;
@@ -2011,7 +2080,27 @@ input:checked+.slider:before {
     display: none !important;
   }
 
+
   .touch-only-controls {
-    display: flex;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+    width: 100%;
+  }
+
+  .control-item-mobile {
+    padding: 6px 10px;
+    border-radius: 8px;
+    gap: 8px;
+  }
+
+  .control-item-mobile .label {
+    font-size: 0.7rem;
+    line-height: 1.3;
+  }
+
+  .control-item-mobile .mobile-icon {
+    font-size: 0.95rem;
   }
 }

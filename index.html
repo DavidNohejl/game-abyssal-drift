@@ -47,80 +47,94 @@
         and explore the marine abyss. Watch your oxygen levels and avoid stinging deep-sea jellyfish!
       </p>
 
-      <div class="controls-guide">
-        <h3>CONTROLS</h3>
-        <div class="controls-grid desktop-only-controls">
-          <div class="control-item">
-            <span class="key">W</span> <span class="key">S</span>
-            <span class="label">Pitch (Nose Down / Up)</span>
+      <!-- Expandable Controls Guide Section -->
+      <details class="expandable-menu-section">
+        <summary>🕹️ PILOTING CONTROLS</summary>
+        <div class="expandable-content">
+          <div class="controls-grid desktop-only-controls" style="margin-top: 10px;">
+            <div class="control-item">
+              <span class="key">W</span> <span class="key">S</span>
+              <span class="label">Pitch (Nose Down / Up)</span>
+            </div>
+            <div class="control-item">
+              <span class="key">A</span> <span class="key">D</span>
+              <span class="label">Yaw (Steer Left / Right)</span>
+            </div>
+            <div class="control-item">
+              <span class="key">Space</span> <span class="key">X</span>
+              <span class="label">Ballast (Ascend / Descend)</span>
+            </div>
+            <div class="control-item">
+              <span class="key">C</span>
+              <span class="label">Camera (Cycle 4 View Angles)</span>
+            </div>
+            <div class="control-item">
+              <span class="key">F</span>
+              <span class="label">Hold to Scan (Within 28m)</span>
+            </div>
+            <div class="control-item">
+              <span class="key">0</span>-<span class="key">3</span>
+              <span class="label">Shift Engine Gear Selector</span>
+            </div>
           </div>
-          <div class="control-item">
-            <span class="key">A</span> <span class="key">D</span>
-            <span class="label">Yaw (Steer Left / Right)</span>
-          </div>
-          <div class="control-item">
-            <span class="key">Space</span> <span class="key">X</span>
-            <span class="label">Ballast (Ascend / Descend)</span>
-          </div>
-          <div class="control-item">
-            <span class="key">C</span>
-            <span class="label">Camera (Cycle 4 View Angles)</span>
-          </div>
-          <div class="control-item">
-            <span class="key">F</span>
-            <span class="label">Hold to Scan (Within 28m)</span>
-          </div>
-          <div class="control-item">
-            <span class="key">0</span>-<span class="key">3</span>
-            <span class="label">Shift Engine Gear Selector</span>
-          </div>
-        </div>
 
-        <div class="touch-only-controls">
-          <div class="control-item-mobile">
-            <span class="mobile-icon">🕹️</span>
-            <span class="label">Drag Joystick to Steer (Yaw & Pitch)</span>
-          </div>
-          <div class="control-item-mobile">
-            <span class="mobile-icon">⬆️</span>
-            <span class="label">Hold UP to Ascend / Surface</span>
-          </div>
-          <div class="control-item-mobile">
-            <span class="mobile-icon">⬇️</span>
-            <span class="label">Hold DOWN to Descend / Undock</span>
-          </div>
-          <div class="control-item-mobile">
-            <span class="mobile-icon">⚙️</span>
-            <span class="label">Drag Shifter to set Engine Gears (0 - 3)</span>
-          </div>
-          <div class="control-item-mobile">
-            <span class="mobile-icon">🔍</span>
-            <span class="label">Hold SCAN to Lock-On & Catalog Objects</span>
+          <div class="touch-only-controls" style="margin-top: 10px;">
+            <div class="control-item-mobile">
+              <span class="mobile-icon">🕹️</span>
+              <span class="label">Drag Joystick to Steer (Yaw & Pitch)</span>
+            </div>
+            <div class="control-item-mobile">
+              <span class="mobile-icon">⬆️</span>
+              <span class="label">Hold UP to Ascend / Surface</span>
+            </div>
+            <div class="control-item-mobile">
+              <span class="mobile-icon">⬇️</span>
+              <span class="label">Hold DOWN to Descend / Undock</span>
+            </div>
+            <div class="control-item-mobile">
+              <span class="mobile-icon">⚙️</span>
+              <span class="label">Drag Shifter to set Engine Gears (0 - 3)</span>
+            </div>
+            <div class="control-item-mobile">
+              <span class="mobile-icon">🔍</span>
+              <span class="label">Hold SCAN to Lock-On & Catalog Objects</span>
+            </div>
           </div>
         </div>
+      </details>
 
-        <div class="research-info-section">
-          <h3>MOTHER SHIP & RESEARCH</h3>
-          <div class="info-text">
-            Dock directly under the floating <strong>Research Vessel</strong> at coordinates (0, 0) near the surface to recharge oxygen. Spend collected <strong>Pearls</strong> to upgrade your speed, oxygen capacity, or unlock the <strong>Autopilot Homing System</strong>. Undock anytime by pressing <strong>X</strong> (keyboard) or <strong>DOWN</strong> (mobile).
+      <!-- Expandable Mother Ship & Research Section -->
+      <details class="expandable-menu-section">
+        <summary>🚢 MOTHER SHIP & RESEARCH</summary>
+        <div class="expandable-content">
+          <div class="research-info-section" style="margin-top: 10px;">
+            <div class="info-text">
+              Dock directly under the floating <strong>Research Vessel</strong> at coordinates (0, 0) near the surface to recharge oxygen. Spend collected <strong>Pearls</strong> to upgrade your speed, oxygen capacity, or unlock the <strong>Autopilot Homing System</strong>. Undock anytime by pressing <strong>X</strong> (keyboard) or <strong>DOWN</strong> (mobile).
+            </div>
           </div>
         </div>
-        <div class="mouse-toggle-container">
-          <label class="switch">
-            <input type="checkbox" id="mouse-control-checkbox">
-            <span class="slider round"></span>
-          </label>
-          <span class="toggle-label">Enable Mouse Control (Steer with Cursor)</span>
-        </div>
-      </div>
+      </details>
 
-      <div class="settings-group">
-        <h3>GRADIENT VISUALS</h3>
-        <div class="btn-group" role="group" aria-label="Graphics Quality Selector">
-          <button id="btn-graphics-low" class="btn btn-secondary">Low</button>
-          <button id="btn-graphics-high" class="btn btn-secondary active">High (God Rays & Shadows)</button>
+      <!-- Expandable Advanced Settings (Graphics & Steering Mode) Section -->
+      <details class="expandable-menu-section">
+        <summary>⚙️ ADVANCED SETTINGS</summary>
+        <div class="expandable-content">
+          <div class="settings-group" style="margin-top: 10px;">
+            <h3 style="margin-bottom: 8px;">GRAPHICS QUALITY</h3>
+            <div class="btn-group" role="group" aria-label="Graphics Quality Selector">
+              <button id="btn-graphics-low" class="btn btn-secondary">Low</button>
+              <button id="btn-graphics-high" class="btn btn-secondary active">High (God Rays & Shadows)</button>
+            </div>
+          </div>
+          <div class="mouse-toggle-container" style="margin-top: 10px; width: 100%;">
+            <label class="switch">
+              <input type="checkbox" id="mouse-control-checkbox">
+              <span class="slider round"></span>
+            </label>
+            <span class="toggle-label">Enable Mouse Control (Steer with Cursor)</span>
+          </div>
         </div>
-      </div>
+      </details>
 
       <div style="display: flex; gap: 12px; width: 100%; margin-top: 15px;">
         <button id="btn-start" class="btn btn-primary btn-glow" style="flex: 1;">DIVE IN</button>
