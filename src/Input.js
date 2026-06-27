@@ -1,7 +1,7 @@
 export class Input {
   constructor(game, mouseCheckbox) {
     this.game = game;
-    this.keys = { w: false, a: false, s: false, d: false, Space: false, c: false, f: false };
+    this.keys = { w: false, a: false, s: false, d: false, Space: false, x: false, f: false };
     this.mouseControl = false;
     this.mouse = { x: 0, y: 0 };
     this.joystick = { x: 0, y: 0, active: false };
@@ -21,6 +21,7 @@ export class Input {
       if (e.key === ' ') this.keys.Space = true;
       if (key === 'l') this.game.toggleHeadlight();
       if (key === 'u') this.game.toggleAutopilot();
+      if (key === 'c') this.game.cycleCameraMode();
       
       if (e.key === 'Escape') {
         if (this.game.state === 'PLAYING') {
@@ -129,9 +130,9 @@ export class Input {
       btnUp.addEventListener('touchcancel', () => { this.keys.Space = false; });
     }
     if (btnDown) {
-      btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys.c = true; }, { passive: false });
-      btnDown.addEventListener('touchend', () => { this.keys.c = false; });
-      btnDown.addEventListener('touchcancel', () => { this.keys.c = false; });
+      btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys.x = true; }, { passive: false });
+      btnDown.addEventListener('touchend', () => { this.keys.x = false; });
+      btnDown.addEventListener('touchcancel', () => { this.keys.x = false; });
     }
     if (btnScan) {
       btnScan.addEventListener('touchstart', (e) => { e.preventDefault(); this.keys.f = true; }, { passive: false });

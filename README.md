@@ -38,9 +38,10 @@ If you use VS Code, install the **Live Server** extension, open the project fold
 ## 🕹️ Controls Guide
 
 ### 💻 Desktop Controls
-- **Pitch (Tilt Up/Down)**: Press `W` (Pitch Down) and `S` (Pitch Up) *or* hold **Space** (Ascend) and `C` (Descend).
+- **Pitch (Tilt Up/Down)**: Press `W` (Pitch Down) and `S` (Pitch Up) *or* hold **Space** (Ascend) and `X` (Descend).
 - **Yaw (Steer Left/Right)**: Press `A` (Turn Left) and `D` (Turn Right).
 - **Submarine Lights**: Press `L` to toggle the powerful forward searchlight.
+- **Camera View Angle**: Press `C` to rotate through the 4 available camera views (Chase, First-Person, Top-Down, and Side views).
 - **Autopilot**: Press `U` to engage/disengage autopilot homing system (once unlocked at the Mother Ship).
 - **Object Scanner**: Move close to any marine object (within 28m) and hold `F` to scan it and catalog it.
 - **Engine Gear Selector**: Press keys `0`, `1`, `2`, or `3` to shift gears (0: Stop, 1: Slow, 2: Cruise, 3: Boost).

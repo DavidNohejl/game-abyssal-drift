@@ -5,13 +5,13 @@ export class Player {
   constructor(scene) {
     this.scene = scene;
     this.mesh = new THREE.Group(); // Represents the main submarine container
-    
+
     // Submarine parameters
     this.score = 0;
     this.oxygen = 100; // Represents life support systems
     this.depth = 0;
     this.maxDepth = 0;
-    
+
     this.selectedGear = 2; // Default starting gear is 2 (Cruise)
     this.swimTime = 0;
     this.velocity = new THREE.Vector3();
@@ -20,7 +20,7 @@ export class Player {
     this.graphicsHigh = true;
     this.isDocked = false;
     this.dockCooldown = 0;
-    
+
     // Upgrades and autopilot navigation state
     this.upgrades = {
       speed: 0,
@@ -28,31 +28,32 @@ export class Player {
       autopilot: false // unlocked or not
     };
     this.autopilotActive = false;
+    this.cameraMode = 0; // 0: Chase, 1: First-Person, 2: Top-Down, 3: Side Cinematic
     this.autopilotStatus = "OFFLINE";
-    
+
     // Bubble Pool for exhaust bubbles
     this.bubblePool = [];
     this.bubblePoolIndex = 0;
-    
+
     this.createModel();
     this.createBubblePool();
-    
+
     this.scene.add(this.mesh);
   }
 
   createModel() {
-    // 1. Sleek metallic hull material (dark steel/carbon grey)
+    // 1. Sleek metallic hull material (dark steel/carbon grey - made less shiny and more matte)
     const hullMat = new THREE.MeshStandardMaterial({
-      color: 0x222a33,
-      roughness: 0.15,
-      metalness: 0.85
+      color: 0x2d3a4b,
+      roughness: 0.55,
+      metalness: 0.35
     });
 
     // Accent safety orange/yellow trim material
     const accentMat = new THREE.MeshStandardMaterial({
       color: 0xff8c00,
-      roughness: 0.3,
-      metalness: 0.6
+      roughness: 0.6,
+      metalness: 0.25
     });
 
     // Glowing cyan neon/light material
@@ -87,32 +88,50 @@ export class Player {
     scopeTip.position.set(0, 1.25, 0.4);
     this.mesh.add(scopeTip);
 
-    // 4. Glowing Portholes / Windows (3 along each side)
-    const windowGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.02, 12);
-    windowGeo.rotateX(Math.PI / 2); // align along Z axis
-    
+    // 4. Glowing Portholes / Windows with metallic outer frames (3 along each side)
+    const frameGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12);
+    frameGeo.rotateX(Math.PI / 2);
+    const glassGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.035, 12);
+    glassGeo.rotateX(Math.PI / 2);
+
     for (let i = 0; i < 3; i++) {
       const zOffset = 0.6 - i * 0.6;
       
-      // Left side portholes
-      const wLeft = new THREE.Mesh(windowGeo, neonMat);
-      wLeft.position.set(0.68, 0.1, zOffset);
-      wLeft.rotation.y = Math.PI / 2;
-      this.mesh.add(wLeft);
+      // Calculate hull radius at this Z position to place the windows exactly on the curved surface
+      const hullRadiusX = 0.85;
+      const hullLength = 2.2;
+      const zRatio = zOffset / hullLength;
+      const r = hullRadiusX * Math.sqrt(Math.max(0.1, 1.0 - zRatio * zRatio));
 
-      // Right side portholes
-      const wRight = new THREE.Mesh(windowGeo, neonMat);
-      wRight.position.set(-0.68, 0.1, zOffset);
-      wRight.rotation.y = -Math.PI / 2;
-      this.mesh.add(wRight);
+      // Left side porthole (grouped frame + neon glass)
+      const leftPorthole = new THREE.Group();
+      leftPorthole.position.set(r, 0.1, zOffset);
+      leftPorthole.rotation.y = Math.PI / 2;
+      
+      const leftFrame = new THREE.Mesh(frameGeo, hullMat);
+      const leftGlass = new THREE.Mesh(glassGeo, neonMat);
+      leftPorthole.add(leftFrame);
+      leftPorthole.add(leftGlass);
+      this.mesh.add(leftPorthole);
+
+      // Right side porthole (grouped frame + neon glass)
+      const rightPorthole = new THREE.Group();
+      rightPorthole.position.set(-r, 0.1, zOffset);
+      rightPorthole.rotation.y = -Math.PI / 2;
+      
+      const rightFrame = new THREE.Mesh(frameGeo, hullMat);
+      const rightGlass = new THREE.Mesh(glassGeo, neonMat);
+      rightPorthole.add(rightFrame);
+      rightPorthole.add(rightGlass);
+      this.mesh.add(rightPorthole);
     }
 
     // 5. Headlight/Spotlight nose lens
-    const lensGeo = new THREE.SphereGeometry(0.35, 12, 12);
-    lensGeo.scale(1.0, 1.0, 0.3); // flat lens cap
-    const lens = new THREE.Mesh(lensGeo, neonMat);
-    lens.position.set(0, 0, 2.15); // nose tip
-    this.mesh.add(lens);
+    // const lensGeo = new THREE.SphereGeometry(0.35, 12, 12);
+    // lensGeo.scale(1.0, 1.0, 0.3); // flat lens cap
+    // const lens = new THREE.Mesh(lensGeo, neonMat);
+    // lens.position.set(0, 0, 2.15); // nose tip
+    // this.mesh.add(lens);
 
     // Spotlight pointing forward and tilted downwards (stronger, longer range, highly focused)
     this.searchlight = new THREE.SpotLight(0x00ffff, 45.0, 85, Math.PI / 12, 0.8, 1.0);
@@ -200,10 +219,10 @@ export class Player {
     // Propeller Group
     this.propellerGroup = new THREE.Group();
     this.propellerGroup.position.set(0, 0, -2.35); // right behind nozzle
-    
+
     const hubGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 8);
     hubGeo.rotateX(Math.PI / 2);
-    const hubMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.1 });
+    const hubMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.5, roughness: 0.5 });
     const hub = new THREE.Mesh(hubGeo, hubMat);
     this.propellerGroup.add(hub);
 
@@ -212,8 +231,8 @@ export class Player {
     bladeGeo.translate(0, 0.32, 0); // pivot at base
     const bladeMat = new THREE.MeshStandardMaterial({
       color: 0xffaa00,
-      metalness: 0.8,
-      roughness: 0.2
+      metalness: 0.4,
+      roughness: 0.5
     });
     for (let i = 0; i < 4; i++) {
       const blade = new THREE.Mesh(bladeGeo, bladeMat);
@@ -223,9 +242,13 @@ export class Player {
     this.mesh.add(this.propellerGroup);
 
     // 7. Stabilizing Control Surfaces (Fins, rudders, elevators)
+    // Calculate tapered hull width at Z = 1.25 for front diving planes (in front of windows)
+    const planeZ = 1.25;
+    const planeR = 0.85 * Math.sqrt(Math.max(0.1, 1.0 - (planeZ / 2.2) * (planeZ / 2.2)));
+
     // Left front diving plane
     this.leftFin = new THREE.Group();
-    this.leftFin.position.set(0.8, 0, 0.6);
+    this.leftFin.position.set(planeR, 0, planeZ);
     const finGeo = new THREE.BoxGeometry(0.4, 0.03, 0.22);
     finGeo.translate(0.2, 0, 0); // pivot
     const leftFinMesh = new THREE.Mesh(finGeo, accentMat);
@@ -234,7 +257,7 @@ export class Player {
 
     // Right front diving plane
     this.rightFin = new THREE.Group();
-    this.rightFin.position.set(-0.8, 0, 0.6);
+    this.rightFin.position.set(-planeR, 0, planeZ);
     const finGeoRight = new THREE.BoxGeometry(0.4, 0.03, 0.22);
     finGeoRight.translate(-0.2, 0, 0);
     const rightFinMesh = new THREE.Mesh(finGeoRight, accentMat);
@@ -268,7 +291,7 @@ export class Player {
       opacity: 0.5,
       blending: THREE.AdditiveBlending
     });
-    
+
     for (let i = 0; i < 60; i++) {
       const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
       bubble.visible = false;
@@ -286,16 +309,16 @@ export class Player {
     const bubble = this.bubblePool[this.bubblePoolIndex];
     bubble.mesh.position.copy(pos);
     bubble.mesh.visible = true;
-    
+
     bubble.velocity.copy(vel).add(new THREE.Vector3(
       (Math.random() - 0.5) * 0.5,
       0.3 + Math.random() * 0.5, // float up
       (Math.random() - 0.5) * 0.5
     ));
-    
+
     bubble.life = 0;
     bubble.maxLife = 0.8 + Math.random() * 0.8;
-    
+
     this.bubblePoolIndex = (this.bubblePoolIndex + 1) % this.bubblePool.length;
   }
 
@@ -310,10 +333,12 @@ export class Player {
     this.isDocked = false;
     this.dockCooldown = 0;
     this.autopilotActive = false;
-    
+    this.cameraMode = 0; // reset to default Chase view
+    this.updateHeadlightVisibility();
+
     this.mesh.position.set(0, -15, 0);
     this.mesh.rotation.set(0, 0, 0);
-    
+
     // Hide active bubbles
     this.bubblePool.forEach(b => {
       b.mesh.visible = false;
@@ -341,10 +366,19 @@ export class Player {
 
   updateHeadlightVisibility() {
     const visible = this.headlightOn && (this.graphicsHigh !== undefined ? this.graphicsHigh : true);
-    if (this.searchlight) {
+
+    if (this.searchlight && this.searchlightBeam) {
+      if (this.cameraMode === 1) {
+        // First-Person cockpit: mount under-chin and forward to prevent camera obstruction
+        this.searchlight.position.set(0, -0.7, 3.2);
+        this.searchlightBeam.position.set(0, -0.7, 3.2);
+      } else {
+        // Third-person views: mount at nose tip
+        this.searchlight.position.set(0, 0, 2.15);
+        this.searchlightBeam.position.set(0, 0, 2.15);
+      }
+
       this.searchlight.visible = visible;
-    }
-    if (this.searchlightBeam) {
       this.searchlightBeam.visible = visible;
     }
   }
@@ -362,17 +396,17 @@ export class Player {
 
   applySting(jellyfish, currentTime) {
     if (jellyfish.stingCooldown && currentTime < jellyfish.stingCooldown) return false;
-    
+
     jellyfish.stingCooldown = currentTime + 1.5;
-    
+
     this.oxygen = Math.max(0, this.oxygen - 18.0);
     audio.playSting();
-    
+
     // Pushback physics (Push submarine opposite to sting)
     const pushDir = this.mesh.position.clone().sub(jellyfish.mesh.position).normalize();
     pushDir.y = 0.2;
     this.mesh.position.addScaledVector(pushDir, 5.0);
-    
+
     return true;
   }
 
@@ -390,70 +424,70 @@ export class Player {
     });
 
     const sub = this.mesh;
-    
+
     if (this.isDocked) {
       sub.position.set(0, -2.2, 0);
       sub.rotation.set(0, 0, 0);
       this.velocity.set(0, 0, 0);
       this.oxygen = 100;
-      
+
       // Propeller spins slowly at dock
       this.propellerGroup.rotation.z += 0.25 * delta;
       this.rudder.rotation.y = 0;
       this.elevator.rotation.x = 0;
       this.leftFin.rotation.x = 0;
       this.rightFin.rotation.x = 0;
-      
+
       // Above-water cinematic overlook camera looking down at the research vessel and docked sub
       const targetCamPos = new THREE.Vector3(14, 12, -20);
       camera.position.lerp(targetCamPos, 0.08);
       camera.lookAt(new THREE.Vector3(0, -0.5, 0));
-      
+
       camLight.position.copy(camera.position);
       sunLight.position.set(sub.position.x, sub.position.y + 45, sub.position.z + 15);
       sunLight.target = sub;
-      
+
       this.depth = -sub.position.y;
-      
-      // Press C or S to undock (ballast down / steer back)
-      if (input.keys.c || input.keys.s) {
+
+      // Press X or S to undock (ballast down / steer back)
+      if (input.keys.x || input.keys.s) {
         this.isDocked = false;
         sub.position.y = -6.5; // push down out of docking port range (port is at Y = -1.2, Y = -6.5 is 5.3m away, which is > 4.5m radius)
         this.dockCooldown = time + 2.0; // 2 seconds cooldown before it can dock again
       }
       return;
     }
-    
+
     // Forward direction vector of the submarine
     const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(sub.quaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(sub.quaternion);
-    
+
     let pitchInput = 0;
     let yawInput = 0;
     let heaveInput = 0;
-    
+
     // Check for manual steering to override autopilot
-    const hasSteeringInput = 
-      input.keys.w || input.keys.s || input.keys.a || input.keys.d || 
+    const hasSteeringInput =
+      input.keys.w || input.keys.s || input.keys.a || input.keys.d ||
       input.keys.Space || input.keys.c ||
       (input.mouseControl && (Math.abs(input.mouse.x) > 0.1 || Math.abs(input.mouse.y) > 0.1)) ||
       input.joystick.active;
-      
+
     if (this.autopilotActive && hasSteeringInput) {
       this.autopilotActive = false;
       if (typeof triggerSurfaceBanner === 'function') {
         triggerSurfaceBanner("AUTOPILOT OVERRIDDEN");
       }
     }
-    
+
     if (this.autopilotActive) {
       const vesselDockPos = new THREE.Vector3(0, -1.2, 0);
       const horizontalDist = Math.sqrt(sub.position.x * sub.position.x + sub.position.z * sub.position.z);
       const transitY = -5.0; // safe depth clearing all peaks
-      
+
       let targetPos = new THREE.Vector3();
       let desiredPitch = null;
-      
+
       // 1. Determine base phase target
       if (sub.position.y < -6.5 && horizontalDist > 8.0) {
         this.autopilotStatus = "ASCENDING TO SAFE TRANSIT DEPTH (-5M)";
@@ -505,7 +539,7 @@ export class Player {
           yawInput = Math.max(-1.6, Math.min(1.6, yawInput));
         }
       }
-      
+
       // 4. Proportional pitch steering (stabilize to level if close to target depth)
       const currentPitch = Math.asin(forward.y);
       if (desiredPitch === null) {
@@ -516,10 +550,10 @@ export class Player {
           desiredPitch = 0; // Maintain level pitch close to depth target
         }
       }
-      
+
       pitchInput = -(desiredPitch - currentPitch) * 4.0;
       pitchInput = Math.max(-1.8, Math.min(1.8, pitchInput));
-      
+
       // 5. Deceleration based on distance from mothership
       if (horizontalDist > 40.0) {
         this.selectedGear = 3; // Fast transit
@@ -557,7 +591,7 @@ export class Player {
         const rawX = input.joystick.x;
         const rawY = input.joystick.y;
         const dist = Math.sqrt(rawX * rawX + rawY * rawY);
-        
+
         if (dist < deadzone) {
           yawInput = 0;
           pitchInput = 0;
@@ -566,10 +600,10 @@ export class Player {
           const scaledDist = (dist - deadzone) / (1.0 - deadzone);
           // Apply response exponent (1.5) to make it smooth and precise near the center
           const curveDist = Math.pow(scaledDist, 1.5);
-          
+
           const joyX = (rawX / dist) * curveDist;
           const joyY = (rawY / dist) * curveDist;
-          
+
           // Steer multipliers (reduced slightly from 2.2/2.0 to 1.8/1.6 for comfortable touch steering)
           yawInput = -joyX * 1.8;
           pitchInput = joyY * 1.6;
@@ -584,13 +618,13 @@ export class Player {
         if (input.keys.d) yawInput = -1.6;   // Turn right
       }
     }
-    
+
     // Apply Rotation speeds
     const rotSpeedMap = { 0: 1.2, 1: 1.4, 2: 1.1, 3: 0.8 };
     const rotSpeed = rotSpeedMap[this.selectedGear];
     sub.rotateOnAxis(new THREE.Vector3(1, 0, 0), pitchInput * rotSpeed * delta);
     sub.rotateOnAxis(new THREE.Vector3(0, 1, 0), yawInput * rotSpeed * delta);
-    
+
     // Roll stabilizer & banking effect into turns
     const currentRoll = Math.atan2(
       right.y,
@@ -598,27 +632,27 @@ export class Player {
     );
     const targetRoll = -yawInput * 0.25;
     sub.rotateOnAxis(new THREE.Vector3(0, 0, 1), (targetRoll - currentRoll) * 0.08);
-    
+
     // SPEED KINEMATICS (No boosts, cruise speed strictly mapped to gear)
     const speedMult = 1.0 + (this.upgrades.speed || 0) * 0.15;
     const cruisingSpeedMap = { 0: 0.0, 1: 3.5, 2: 7.0, 3: 11.5 };
     const baseCruisingSpeed = cruisingSpeedMap[this.selectedGear] * speedMult;
-    
-    // VERTICAL HEAVE CONTROL (Space to go Up, C to go Down)
+
+    // VERTICAL HEAVE CONTROL (Space to go Up, X to go Down)
     const heaveSpeedMap = { 0: 2.0, 1: 3.0, 2: 5.0, 3: 7.0 };
     const heaveSpeed = heaveSpeedMap[this.selectedGear] * speedMult;
     if (!this.autopilotActive) {
       if (input.keys.Space) heaveInput += heaveSpeed;
-      if (input.keys.c) heaveInput -= heaveSpeed;
+      if (input.keys.x) heaveInput -= heaveSpeed;
     }
 
     // Combine forward and global vertical velocity
     this.velocity.copy(forward).multiplyScalar(baseCruisingSpeed);
     this.velocity.y += heaveInput;
-    
+
     // Apply position integration
     sub.position.addScaledVector(this.velocity, delta);
-    
+
     // BOUNDARIES ENFORCEMENT
     if (sub.position.y > 0) {
       // Recharge/Refill oxygen when surfacing
@@ -630,32 +664,32 @@ export class Player {
       sub.position.y = 0;
       if (this.velocity.y > 0) this.velocity.y *= -0.5;
     }
-    
+
     const terrainHeight = environment.getTerrainHeight(sub.position.x, sub.position.z);
     if (sub.position.y < terrainHeight + 1.6) {
       sub.position.y = terrainHeight + 1.6;
       if (this.velocity.y < 0) this.velocity.y = 0;
     }
-    
+
     const arenaRadius = 160;
     const distFromOrigin = Math.sqrt(sub.position.x * sub.position.x + sub.position.z * sub.position.z);
     if (distFromOrigin > arenaRadius) {
       const push = new THREE.Vector3(-sub.position.x, 0, -sub.position.z).normalize().multiplyScalar(delta * 12);
       sub.position.add(push);
     }
-    
+
     // SUBMARINE KINEMATIC ANIMATIONS
     // Propeller spinning speed & bubble exhaust
     let spinMultiplier = 3.0; // base slow drift
     if (this.selectedGear > 0) {
       const currentSpeed = this.velocity.length();
       spinMultiplier = currentSpeed * 1.5;
-      
+
       // Exhaust bubble rate scales per gear, slightly enhanced when performing vertical maneuvers
       const exhaustProb = { 1: 0.08, 2: 0.25, 3: 0.55 }[this.selectedGear];
       const isHeaving = input.keys.Space || input.keys.c;
       const finalExhaustChance = isHeaving ? (exhaustProb * 1.5) : exhaustProb;
-      
+
       if (Math.random() < finalExhaustChance) {
         const exhaustPos = new THREE.Vector3(0, 0, -2.4).applyMatrix4(this.mesh.matrixWorld);
         const dragVel = forward.clone().multiplyScalar(-3.0);
@@ -666,37 +700,65 @@ export class Player {
       spinMultiplier = 0.2;
     }
     this.propellerGroup.rotation.z += (spinMultiplier) * delta;
-    
+
     // Control surface fin feedback (rudders tilt for yaw, elevators tilt for pitch + heave)
     this.rudder.rotation.y = yawInput * 0.35;
-    
+
     let elevatorTilt = -pitchInput * 0.3;
     if (input.keys.Space) elevatorTilt += 0.25; // tilt horizontal planes up
-    if (input.keys.c) elevatorTilt -= 0.25; // tilt horizontal planes down
-    
+    if (input.keys.x) elevatorTilt -= 0.25; // tilt horizontal planes down
+
     this.elevator.rotation.x = elevatorTilt;
     this.leftFin.rotation.x = elevatorTilt;
     this.rightFin.rotation.x = elevatorTilt;
-    
-    // 7. CINEMATIC TRACKING CAMERA (behind player)
-    const camOffset = new THREE.Vector3(0, 2.5, -9.5).applyQuaternion(sub.quaternion);
+
+    // 7. MULTI-ANGLE TRACKING CAMERA
+    let camOffsetLocal, lookOffsetLocal;
+
+    switch (this.cameraMode) {
+      case 1: // First-Person / Porthole View
+        camOffsetLocal = new THREE.Vector3(0, 0.3, 1.2);
+        lookOffsetLocal = new THREE.Vector3(0, 0.3, 8.0);
+        break;
+      case 2: // Top-Down / Overhead Sonar View
+        camOffsetLocal = new THREE.Vector3(0, 14.0, -0.1);
+        lookOffsetLocal = new THREE.Vector3(0, 0, 0.5);
+        break;
+      case 3: // Side Cinematic / Fly-by View
+        camOffsetLocal = new THREE.Vector3(9.0, 1.5, -4.0);
+        lookOffsetLocal = new THREE.Vector3(0, 0.2, 2.0);
+        break;
+      case 0: // Third-Person Chase (Default)
+      default:
+        camOffsetLocal = new THREE.Vector3(0, 2.5, -9.5);
+        lookOffsetLocal = new THREE.Vector3(0, 0.2, 4.0);
+        break;
+    }
+
+    const camOffset = camOffsetLocal.applyQuaternion(sub.quaternion);
     const targetCamPos = sub.position.clone().add(camOffset);
-    camera.position.lerp(targetCamPos, 0.08);
-    
-    const lookOffset = new THREE.Vector3(0, 0.2, 4.0).applyQuaternion(sub.quaternion);
+
+    // In First-Person, camera lock position is instant to prevent laggy translation
+    if (this.cameraMode === 1) {
+      camera.position.copy(targetCamPos);
+    } else {
+      camera.position.lerp(targetCamPos, 0.08);
+    }
+
+    const lookOffset = lookOffsetLocal.applyQuaternion(sub.quaternion);
     camera.lookAt(sub.position.clone().add(lookOffset));
-    
+
     // Align point light to follow camera
     camLight.position.copy(camera.position);
-    
+
     // Keep sun lighting centered near player for shadow map quality
     sunLight.position.set(sub.position.x, sub.position.y + 45, sub.position.z + 15);
     sunLight.target = sub;
-    
+
     // Update depths tracking
     this.depth = -sub.position.y;
     if (this.depth > this.maxDepth) this.maxDepth = this.depth;
-    
+
     // Drain oxygen (life support battery) slowly
     const o2DrainMult = 1.0 - (this.upgrades.oxygen || 0) * 0.20;
     this.oxygen = Math.max(0, this.oxygen - delta * 1.15 * o2DrainMult);
@@ -705,16 +767,16 @@ export class Player {
   updateMenuAnimation(time, delta, camera) {
     this.mesh.position.y = -15 + Math.sin(time * 0.6) * 0.8;
     this.mesh.rotation.y += delta * 0.05;
-    
+
     // Propeller spin
     this.propellerGroup.rotation.z += 4.0 * delta;
-    
+
     // Reset control surfaces
     this.rudder.rotation.y = 0;
     this.elevator.rotation.x = 0;
     this.leftFin.rotation.x = 0;
     this.rightFin.rotation.x = 0;
-    
+
     camera.position.set(0, -11, -12);
     camera.lookAt(0, -15, 0);
   }

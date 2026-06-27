@@ -340,6 +340,21 @@ class Game {
     audio.playBubble(); // small feedback sound
   }
 
+  cycleCameraMode() {
+    if (this.state !== STATE_PLAYING) return;
+    this.player.cameraMode = (this.player.cameraMode + 1) % 4;
+    this.player.updateHeadlightVisibility();
+    let modeName = "";
+    switch (this.player.cameraMode) {
+      case 0: modeName = "CHASE CAMERA"; break;
+      case 1: modeName = "FIRST-PERSON VIEW"; break;
+      case 2: modeName = "TOP-DOWN SONAR CAM"; break;
+      case 3: modeName = "SIDE CINEMATIC VIEW"; break;
+    }
+    this.ui.triggerSurfaceBanner(modeName);
+    audio.playBubble(); // play a small visual change feedback sound
+  }
+
   startGame() {
     audio.init();
     

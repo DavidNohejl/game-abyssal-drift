@@ -1923,6 +1923,33 @@ input:checked+.slider:before {
   font-size: 1.1rem;
 }
 
+/* RESEARCH INFO SECTION ON START CARD */
+.research-info-section {
+  margin-top: 15px;
+  width: 100%;
+}
+
+.research-info-section h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  border-left: 3px solid var(--color-primary); /* Cyan colored left accent */
+  padding-left: 8px;
+}
+
+.research-info-section .info-text {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--color-text-dim);
+  background: rgba(0, 240, 255, 0.02);
+  border: 1px solid rgba(0, 240, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 300;
+}
+
 .control-item-mobile .label {
   font-size: 0.8rem;
   color: var(--color-text);
