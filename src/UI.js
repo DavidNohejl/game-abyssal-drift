@@ -61,8 +61,17 @@ export class UI {
     this.setupEvents();
   }
 
+  get isMobile() {
+    return window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth <= 640;
+  }
+
   // Bind HUD buttons, keyboard inputs, mouse controls, resize handlers
   setupEvents() {
+    // Set initial scanner prompt based on mobile/touch layout
+    if (this.dom.scannerPrompt) {
+      this.dom.scannerPrompt.innerText = this.isMobile ? "Hold [SCAN] to scan" : "Hold [F] to scan";
+    }
+
     // Game start controls
     this.dom.btnStart.addEventListener('click', () => this.game.handleStartButtonClick());
     this.dom.btnRestart.addEventListener('click', () => this.game.startGame());
@@ -159,6 +168,19 @@ export class UI {
       const bGear = parseInt(btn.getAttribute('data-gear'));
       btn.classList.toggle('active', bGear === gear);
     });
+
+    // Update touch throttle slider value and active notches if it exists
+    const throttleInput = document.getElementById('touch-throttle-input');
+    const notches = document.querySelectorAll('.throttle-notch');
+    if (throttleInput) {
+      throttleInput.value = gear;
+      
+      // Update notch active highlights
+      notches.forEach(notch => {
+        const nGear = parseInt(notch.getAttribute('data-gear'));
+        notch.classList.toggle('active', nGear === gear);
+      });
+    }
   }
 
   updateHeadlightUI(on) {
@@ -295,7 +317,7 @@ export class UI {
         this.dom.scannerPrompt.innerText = "Scanning: " + Math.round(scanProgress) + "%";
       } else {
         this.dom.scannerProgressContainer.classList.add('hidden');
-        this.dom.scannerPrompt.innerText = "Hold [F] to scan";
+        this.dom.scannerPrompt.innerText = this.isMobile ? "Hold [SCAN] to scan" : "Hold [F] to scan";
       }
     }
     

@@ -138,5 +138,16 @@ export class Input {
       btnScan.addEventListener('touchend', () => { this.keys.f = false; });
       btnScan.addEventListener('touchcancel', () => { this.keys.f = false; });
     }
+
+    // Setup mobile throttle slider (Real range input Shifter)
+    const throttleInput = document.getElementById('touch-throttle-input');
+    if (throttleInput) {
+      const onInput = (e) => {
+        const gear = parseInt(e.target.value);
+        this.game.setGear(gear);
+      };
+      throttleInput.addEventListener('input', onInput);
+      throttleInput.addEventListener('change', onInput);
+    }
   }
 }

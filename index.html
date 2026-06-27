@@ -127,7 +127,7 @@
         <span class="hud-label">VESSEL DIST</span>
         <span id="stat-vessel" class="hud-value">0<span class="unit">m</span></span>
       </div>
-      <div class="hud-stat">
+      <div class="hud-stat" id="hud-gear-stat">
         <span class="hud-label">ENGINE GEAR</span>
         <div id="gear-selector" class="gear-selector">
           <button class="gear-btn" data-gear="0">0</button>
@@ -227,6 +227,21 @@
           <div id="joystick-knob"></div>
         </div>
       </div>
+      
+      <!-- Touch Throttle Shifter (Real Range Input Shifter) -->
+      <div id="touch-throttle-container">
+        <div class="throttle-label">THRUST</div>
+        <div class="throttle-wrapper">
+          <input type="range" id="touch-throttle-input" min="0" max="3" step="1" value="2">
+          <div class="throttle-notches">
+            <div class="throttle-notch notch-3" data-gear="3">3</div>
+            <div class="throttle-notch notch-2" data-gear="2">2</div>
+            <div class="throttle-notch notch-1" data-gear="1">1</div>
+            <div class="throttle-notch notch-0" data-gear="0">0</div>
+          </div>
+        </div>
+      </div>
+
       <div id="touch-action-buttons">
 
       </div>
