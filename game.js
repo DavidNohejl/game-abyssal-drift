@@ -393,7 +393,7 @@ class Game {
     this.time += delta;
     
     // 1. Update backdrop
-    this.environment.update(this.time, delta);
+    this.environment.update(this.time, delta, this.player, this.state, this.ambientLight, this.sunLight);
     
     // 2. Handle gameplay if active
     if (this.state === STATE_PLAYING) {
@@ -407,6 +407,23 @@ class Game {
         this.sunLight,
         () => this.ui.triggerSurfaceBanner()
       );
+
+      // Dynamic depth-based lighting and fog (abyss gets darker)
+      const depth = this.player.depth;
+      const depthFactor = Math.max(0, Math.min(1, depth / 100)); // 0 at surface, 1 at 100m+ depth
+      
+      const surfaceColor = new THREE.Color(0x041126);
+      const abyssColor = new THREE.Color(0x000104);
+      const currentColor = surfaceColor.clone().lerp(abyssColor, depthFactor);
+      
+      this.scene.background.copy(currentColor);
+      if (this.scene.fog) {
+        this.scene.fog.color.copy(currentColor);
+      }
+      
+      this.ambientLight.intensity = THREE.MathUtils.lerp(1.5, 0.05, depthFactor);
+      this.sunLight.intensity = THREE.MathUtils.lerp(2.5, 0.0, depthFactor);
+      this.camLight.intensity = THREE.MathUtils.lerp(0.8, 0.15, depthFactor);
       
       this.entityManager.update(this.time, delta);
       this.checkCollisions();
@@ -416,9 +433,12 @@ class Game {
         this.player.score
       );
       
+      const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.mesh.quaternion);
+      const playerYaw = Math.atan2(forwardDir.x, forwardDir.z);
+      
       this.ui.updateSonar(
         this.player.mesh.position,
-        this.player.mesh.rotation.y,
+        playerYaw,
         this.entityManager,
         delta
       );
@@ -442,13 +462,25 @@ class Game {
       if (this.player.oxygen <= 0) {
         this.gameOver();
       }
-    } else if (this.state === STATE_PAUSED) {
-      // Just render frame, hide dynamic laser/ring
-      this.scanRing.visible = false;
-      this.scanLaser.visible = false;
     } else {
-      // In menu/game over: Slowly rotate/float player in center background
-      this.player.updateMenuAnimation(this.time, delta, this.camera);
+      // Reset to default surface lighting in menus/paused/gameover states
+      const surfaceColor = new THREE.Color(0x041126);
+      this.scene.background.copy(surfaceColor);
+      if (this.scene.fog) {
+        this.scene.fog.color.copy(surfaceColor);
+      }
+      this.ambientLight.intensity = 1.5;
+      this.sunLight.intensity = 2.5;
+      this.camLight.intensity = 0.8;
+
+      if (this.state === STATE_PAUSED) {
+        // Just render frame, hide dynamic laser/ring
+        this.scanRing.visible = false;
+        this.scanLaser.visible = false;
+      } else {
+        // In menu/game over: Slowly rotate/float player in center background
+        this.player.updateMenuAnimation(this.time, delta, this.camera);
+      }
     }
     
     // Render Frame

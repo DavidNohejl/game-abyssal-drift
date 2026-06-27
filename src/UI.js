@@ -522,9 +522,9 @@ export class UI {
       const dist = Math.sqrt(dx * dx + dz * dz);
       if (dist > sonarRange) return;
       
-      // Rotate coordinates by negative playerYaw to implement Head-Up mode
-      const relX = dx * Math.cos(-playerYaw) - dz * Math.sin(-playerYaw);
-      const relZ = dx * Math.sin(-playerYaw) + dz * Math.cos(-playerYaw);
+      // Rotate coordinates relative to player yaw heading (Head-Up mode)
+      const relX = -dx * Math.cos(playerYaw) + dz * Math.sin(playerYaw);
+      const relZ = dx * Math.sin(playerYaw) + dz * Math.cos(playerYaw);
       
       // Map Z to -Y on canvas and X to +X on canvas
       const bx = cx + relX * scale;

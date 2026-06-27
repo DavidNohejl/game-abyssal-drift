@@ -1482,6 +1482,7 @@ input:checked+.slider:before {
   justify-content: flex-start;
   align-items: center;
   pointer-events: auto;
+  gap: 12px;
 }
 
 #joystick-zone {
@@ -1640,6 +1641,10 @@ input:checked+.slider:before {
     gap: 8px;
     margin-right: 95px;
     /* leaves room for the smaller mobile sonar */
+  }
+
+  .touch-side-left {
+    gap: 8px;
   }
 
   .scan-pulse-btn {

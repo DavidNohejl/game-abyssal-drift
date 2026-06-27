@@ -114,31 +114,72 @@ export class Player {
     lens.position.set(0, 0, 2.15); // nose tip
     this.mesh.add(lens);
 
-    // Spotlight pointing forward
-    this.searchlight = new THREE.SpotLight(0x00ffff, 8.0, 60, Math.PI / 5, 0.6, 1.0);
+    // Spotlight pointing forward and tilted downwards (stronger, longer range, highly focused)
+    this.searchlight = new THREE.SpotLight(0x00ffff, 45.0, 85, Math.PI / 12, 0.8, 1.0);
     this.searchlight.position.set(0, 0, 2.15);
     this.searchlight.castShadow = true;
     this.searchlight.shadow.mapSize.width = 512;
     this.searchlight.shadow.mapSize.height = 512;
 
     this.searchlightTarget = new THREE.Object3D();
-    this.searchlightTarget.position.set(0, 0, 10.0);
+    this.searchlightTarget.position.set(0, -2.1, 10.0); // Tilted down by 15 degrees
     this.mesh.add(this.searchlightTarget);
     this.searchlight.target = this.searchlightTarget;
     this.mesh.add(this.searchlight);
 
-    // Volumetric spotlight light beam cutting through fog (additive blending cone)
-    const beamGeo = new THREE.ConeGeometry(2.5, 18.0, 16, 1, true); 
-    beamGeo.rotateX(Math.PI / 2); 
-    beamGeo.translate(0, 0, 9.0); 
-    const beamMat = new THREE.MeshBasicMaterial({
-      color: 0x00f0ff,
+    // Volumetric spotlight light beam cutting through fog (soft volumetric shader god-ray)
+    const beamGeo = new THREE.ConeGeometry(2.4, 18.0, 16, 1, true); // base radius 2.4 matches 15-degree spotlight
+    beamGeo.rotateX(-Math.PI / 2); // rotate so apex is at negative Z, base at positive Z
+    beamGeo.translate(0, 0, 9.0);  // shift so apex is at Z = 0, base at Z = 18.0
+    const beamMat = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewDir;
+        varying float vDepthZ;
+        
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewDir = -normalize(mvPosition.xyz);
+          vDepthZ = position.z; // local Z coordinate (0 at apex, 18 at base)
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewDir;
+        varying float vDepthZ;
+        
+        void main() {
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewDir);
+          
+          // Soft silhouette edge falloff to remove hard plastic cylinder edges
+          float edgeFalloff = dot(normal, viewDir);
+          edgeFalloff = abs(edgeFalloff);
+          edgeFalloff = pow(edgeFalloff, 1.5);
+          
+          // Distance falloff from headlight source (0 at nose, 18 at tip)
+          float distFalloff = 1.0 - (vDepthZ / 18.0);
+          distFalloff = clamp(distFalloff, 0.0, 1.0);
+          distFalloff = pow(distFalloff, 1.2);
+          
+          // Shimmering micro-dust noise along the beam
+          float shimmer = 0.8 + 0.2 * sin(vDepthZ * 2.5);
+          
+          float finalOpacity = 0.38 * edgeFalloff * distFalloff * shimmer;
+          
+          gl_FragColor = vec4(vec3(0.0, 0.95, 1.0), finalOpacity);
+        }
+      `,
       transparent: true,
-      opacity: 0.12,
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false,
+      side: THREE.DoubleSide
     });
     this.searchlightBeam = new THREE.Mesh(beamGeo, beamMat);
+    this.searchlightBeam.position.set(0, 0, 2.15); // Place apex exactly at the nose tip
+    this.searchlightBeam.rotation.x = 0.26; // Tilt beam down by 15 degrees (0.26 radians) to match target
     this.mesh.add(this.searchlightBeam);
 
     // 6. Thruster Nozzle & Propeller screw
@@ -512,8 +553,27 @@ export class Player {
     } else {
       // Normal Input Steer handling
       if (input.joystick.active) {
-        yawInput = -input.joystick.x * 2.2;
-        pitchInput = input.joystick.y * 2.0;
+        const deadzone = 0.05; // 5% deadzone to prevent accidental drift
+        const rawX = input.joystick.x;
+        const rawY = input.joystick.y;
+        const dist = Math.sqrt(rawX * rawX + rawY * rawY);
+        
+        if (dist < deadzone) {
+          yawInput = 0;
+          pitchInput = 0;
+        } else {
+          // Scale distance linearly starting from the deadzone threshold to 1.0
+          const scaledDist = (dist - deadzone) / (1.0 - deadzone);
+          // Apply response exponent (1.5) to make it smooth and precise near the center
+          const curveDist = Math.pow(scaledDist, 1.5);
+          
+          const joyX = (rawX / dist) * curveDist;
+          const joyY = (rawY / dist) * curveDist;
+          
+          // Steer multipliers (reduced slightly from 2.2/2.0 to 1.8/1.6 for comfortable touch steering)
+          yawInput = -joyX * 1.8;
+          pitchInput = joyY * 1.6;
+        }
       } else if (input.mouseControl) {
         if (Math.abs(input.mouse.x) > 0.05) yawInput = -input.mouse.x * 2.2;
         if (Math.abs(input.mouse.y) > 0.05) pitchInput = input.mouse.y * 2.0;

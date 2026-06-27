@@ -8,7 +8,7 @@ export class Environment {
     this.terrainMesh = null;
     this.godRaysGroup = null;
     this.planktonParticles = null;
-    
+
     this.create();
   }
 
@@ -16,7 +16,7 @@ export class Environment {
     // 1. OCEAN SURFACE (Undulating Semi-Transparent Plane with custom GPU Shader)
     const surfaceGeo = new THREE.PlaneGeometry(500, 500, 100, 100); // Higher subdivisions for smooth GPU displacement
     surfaceGeo.rotateX(-Math.PI / 2);
-    
+
     const surfaceMat = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0.0 }
@@ -105,41 +105,41 @@ export class Environment {
       depthWrite: false, // Ensure transparency overlays properly with deep fog
       side: THREE.DoubleSide
     });
-    
+
     this.surfaceMesh = new THREE.Mesh(surfaceGeo, surfaceMat);
     this.scene.add(this.surfaceMesh);
-    
+
     // 2. OCEAN BED (Procedural Sand Dunes painted via Vertices)
     const terrainGeo = new THREE.PlaneGeometry(600, 600, 80, 80);
     terrainGeo.rotateX(-Math.PI / 2);
-    
+
     const pos = terrainGeo.attributes.position;
     const colors = [];
     const minHeight = -48;
     const maxHeight = -8;
-    
+
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
-      
+
       // Compute height using sine ripples
       let height = Math.sin(x * 0.04) * Math.cos(z * 0.04) * 4;
       height += Math.sin(x * 0.08) * Math.sin(z * 0.08) * 1.5;
       height += Math.cos(x * 0.012) * Math.sin(z * 0.012) * 9; // hills
-      
+
       // Add seamount mountains
       const m1 = 25 * Math.exp(-(Math.pow(x - 70, 2) + Math.pow(z - 80, 2)) / 3200);
       const m2 = 22 * Math.exp(-(Math.pow(x + 90, 2) + Math.pow(z + 70, 2)) / 2500);
       const m3 = 28 * Math.exp(-(Math.pow(x + 80, 2) + Math.pow(z - 90, 2)) / 4000);
       const m4 = 24 * Math.exp(-(Math.pow(x - 100, 2) + Math.pow(z + 100, 2)) / 1800);
       height += m1 + m2 + m3 + m4;
-      
+
       const finalY = height - 38; // Place bed around -38m depth
       pos.setY(i, finalY);
-      
+
       // Calculate color value based on height
       const ratio = Math.max(0, Math.min(1, (finalY - minHeight) / (maxHeight - minHeight)));
-      
+
       // Interpolate along multi-stop color band (indigo -> emerald teal -> cyan -> volcano gold)
       let r, g, b;
       if (ratio < 0.4) {
@@ -161,16 +161,32 @@ export class Environment {
         g = 0.80 + (0.70 - 0.80) * t;
         b = 0.60 + (0.08 - 0.60) * t;
       }
-      
+
       colors.push(r, g, b);
     }
-    
+
     terrainGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     terrainGeo.computeVertexNormals();
-    
+
     const terrainMat = new THREE.ShaderMaterial({
       uniforms: {
-        time: { value: 0.0 }
+        time: { value: 0.0 },
+        // Dynamic depth lighting
+        ambientColor: { value: new THREE.Color(0x0d2b45) },
+        ambientIntensity: { value: 1.5 },
+        sunColor: { value: new THREE.Color(0xdcf4ff) },
+        sunIntensity: { value: 2.5 },
+        // Fog color (dynamic)
+        fogColor: { value: new THREE.Color(0x041126) },
+        // Headlight spotlight uniforms
+        headlightOn: { value: true },
+        headlightPosition: { value: new THREE.Vector3() },
+        headlightDirection: { value: new THREE.Vector3() },
+        headlightColor: { value: new THREE.Color(0x00ffff) },
+        headlightIntensity: { value: 45.0 },
+        headlightRange: { value: 85.0 },
+        headlightAngle: { value: Math.PI / 9 },
+        headlightPenumbra: { value: 0.8 }
       },
       vertexColors: true,
       vertexShader: `
@@ -188,6 +204,21 @@ export class Environment {
       `,
       fragmentShader: `
         uniform float time;
+        uniform vec3 ambientColor;
+        uniform float ambientIntensity;
+        uniform vec3 sunColor;
+        uniform float sunIntensity;
+        uniform vec3 fogColor;
+        
+        uniform bool headlightOn;
+        uniform vec3 headlightPosition;
+        uniform vec3 headlightDirection;
+        uniform vec3 headlightColor;
+        uniform float headlightIntensity;
+        uniform float headlightRange;
+        uniform float headlightAngle;
+        uniform float headlightPenumbra;
+        
         varying vec3 vWorldPosition;
         varying vec3 vNormal;
         varying vec3 vColor;
@@ -198,17 +229,41 @@ export class Environment {
           // 1. Lighting Setup
           // Sunlight direction (normalized)
           vec3 sunDir = normalize(vec3(0.0, 1.0, 0.4));
-          // Sunlight color with intensity integrated
-          vec3 sunColor = vec3(0.8627, 0.9568, 1.0) * 2.5;
-          // Ambient light color with intensity integrated
-          vec3 ambientColor = vec3(0.05098, 0.1686, 0.2706) * 1.5;
           
-          // 2. Lambertian Diffuse Lighting
+          // 2. Diffuse lighting from sun and ambient
           float diffuse = max(0.0, dot(normal, sunDir));
-          vec3 litColor = vColor * (ambientColor + sunColor * diffuse);
+          vec3 litColor = vColor * (ambientColor * ambientIntensity + sunColor * sunIntensity * diffuse);
           
-          // 3. Dynamic projected caustics (from world X and Z coordinates)
-          // Double layer absolute sine waves for realistic web-like caustics
+          // 3. Headlight (Spotlight) contribution
+          vec3 headlightContribution = vec3(0.0);
+          if (headlightOn) {
+            vec3 lightToPos = vWorldPosition - headlightPosition;
+            float distance = length(lightToPos);
+            if (distance < headlightRange) {
+              vec3 lDir = normalize(lightToPos);
+              
+              // Angle between light direction and vector to position (both normalized)
+              float angleCos = dot(lDir, headlightDirection);
+              float limitCos = cos(headlightAngle);
+              
+              if (angleCos > limitCos) {
+                // Smooth edge blending (penumbra)
+                float angleFactor = smoothstep(limitCos, mix(limitCos, 1.0, 1.0 - headlightPenumbra), angleCos);
+                
+                // Distance attenuation
+                float distanceFactor = 1.0 - (distance / headlightRange);
+                distanceFactor = clamp(distanceFactor, 0.0, 1.0);
+                
+                // Lambertian diffuse reflection for headlight
+                float dotNL = max(0.0, dot(normal, -lDir));
+                
+                headlightContribution = headlightColor * headlightIntensity * angleFactor * distanceFactor * dotNL;
+              }
+            }
+          }
+          litColor += vColor * headlightContribution * 0.45; // scale headlight reflectance
+          
+          // 4. Dynamic projected caustics (from world X and Z coordinates)
           float t = time * 1.5;
           
           // Layer 1
@@ -228,39 +283,35 @@ export class Environment {
           float modulation = 0.5 + 0.5 * sin(vWorldPosition.x * 0.02 + time * 0.25) * cos(vWorldPosition.z * 0.02 + time * 0.2);
           caustic *= modulation;
           
-          // 4. Depth-based attenuation
-          // Highly visible at seamounts (-10m) and fades out at deep trenches (-40m)
-          // Using a smooth clamp: Y values range from -48m to -8m
+          // Depth-based attenuation (only show caustics near surface seamounts)
           float depthFactor = clamp((vWorldPosition.y + 40.0) / 30.0, 0.0, 1.0);
-          
-          // Add caustics colored highlighting to lit sand
-          // In shallower areas, caustics are intense and colorized
-          vec3 causticColor = vec3(0.2, 0.95, 1.0) * caustic * 0.75 * depthFactor;
+          // Scale caustics with sunlight intensity
+          float sunFactor = clamp(sunIntensity / 2.5, 0.0, 1.0);
+          vec3 causticColor = vec3(0.2, 0.95, 1.0) * caustic * 0.75 * depthFactor * sunFactor;
           litColor += causticColor * vColor;
           
           // 5. Exponential Fog
           float depth = length(cameraPosition - vWorldPosition);
           float fogFactor = 1.0 - exp(-0.015 * 0.015 * depth * depth);
           fogFactor = clamp(fogFactor, 0.0, 1.0);
-          vec3 fogColor = vec3(0.015686, 0.066667, 0.149020);
           
           gl_FragColor = vec4(mix(litColor, fogColor, fogFactor), 1.0);
         }
       `
     });
-    
+
     this.terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
     this.terrainMesh.receiveShadow = true;
     this.scene.add(this.terrainMesh);
-    
+
     // 3. GOD RAYS (Semi-Transparent shimmering light shafts)
     this.godRaysGroup = new THREE.Group();
     const rayCount = 24; // More rays
     const rayGeo = new THREE.ConeGeometry(6, 95, 8, 1, true); // Longer and sleeker rays
     rayGeo.translate(0, -47.5, 0); // Position pivot to top
-    
+
     const rayColors = [0x00f0ff, 0x00ffc8, 0xffebad, 0x00bfff]; // mix of cyan, emerald, golden-sun, and deep-blue
-    
+
     for (let i = 0; i < rayCount; i++) {
       const color = rayColors[i % rayColors.length];
       const rayMat = new THREE.MeshBasicMaterial({
@@ -271,7 +322,7 @@ export class Environment {
         depthWrite: false,
         blending: THREE.AdditiveBlending
       });
-      
+
       const ray = new THREE.Mesh(rayGeo, rayMat);
       ray.position.set(
         (Math.random() - 0.5) * 180,
@@ -280,12 +331,12 @@ export class Environment {
       );
       ray.scale.set(0.5 + Math.random() * 0.8, 0.8 + Math.random() * 0.4, 0.5 + Math.random() * 0.8);
       ray.rotation.y = Math.random() * Math.PI * 2;
-      
+
       const rotX = (Math.random() - 0.5) * 0.2 + (Math.PI / 8); // slight slant
       const rotZ = (Math.random() - 0.5) * 0.2;
       ray.rotation.x = rotX;
       ray.rotation.z = rotZ;
-      
+
       ray.userData = {
         speed: 0.25 + Math.random() * 0.35,
         offset: Math.random() * 100,
@@ -298,20 +349,20 @@ export class Environment {
       this.godRaysGroup.add(ray);
     }
     this.scene.add(this.godRaysGroup);
-    
+
     // 4. FLOATING PLANKTON PARTICLES
     const particleCount = 600;
     const particleGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
-    
+
     for (let i = 0; i < particleCount * 3; i += 3) {
       positions[i] = (Math.random() - 0.5) * 220;     // x
       positions[i + 1] = -40 + Math.random() * 40;     // y
       positions[i + 2] = (Math.random() - 0.5) * 220; // z
     }
-    
+
     particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
+
     // Small glowing cyan particles
     const particleMat = new THREE.PointsMaterial({
       color: 0x00ffc8,
@@ -321,7 +372,7 @@ export class Environment {
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true
     });
-    
+
     this.planktonParticles = new THREE.Points(particleGeo, particleMat);
     this.scene.add(this.planktonParticles);
   }
@@ -330,43 +381,94 @@ export class Environment {
     let height = Math.sin(x * 0.04) * Math.cos(z * 0.04) * 4;
     height += Math.sin(x * 0.08) * Math.sin(z * 0.08) * 1.5;
     height += Math.cos(x * 0.012) * Math.sin(z * 0.012) * 9; // hills
-    
+
     // Add seamount mountains
     const m1 = 25 * Math.exp(-(Math.pow(x - 70, 2) + Math.pow(z - 80, 2)) / 3200);
     const m2 = 22 * Math.exp(-(Math.pow(x + 90, 2) + Math.pow(z + 70, 2)) / 2500);
     const m3 = 28 * Math.exp(-(Math.pow(x + 80, 2) + Math.pow(z - 90, 2)) / 4000);
     const m4 = 24 * Math.exp(-(Math.pow(x - 100, 2) + Math.pow(z + 100, 2)) / 1800);
     height += m1 + m2 + m3 + m4;
-    
+
     return height - 38;
   }
 
-  update(time, delta) {
+  update(time, delta, player, gameState, ambientLight, sunLight) {
     // 1. Shimmer/Undulate Ocean Surface (GPU Shader Material Update)
     if (this.surfaceMesh && this.surfaceMesh.material.uniforms) {
       this.surfaceMesh.material.uniforms.time.value = time;
     }
-    
+
+    let depthFactor = 0.0;
+
     // Update terrain caustics time uniform
     if (this.terrainMesh && this.terrainMesh.material.uniforms) {
-      this.terrainMesh.material.uniforms.time.value = time;
+      const uniforms = this.terrainMesh.material.uniforms;
+      uniforms.time.value = time;
+
+      if (player && gameState === 'PLAYING') {
+        const depth = player.depth;
+        depthFactor = Math.max(0, Math.min(1, depth / 100)); // 0 at surface, 1 at 100m depth
+
+        const sColor = new THREE.Color(0x041126);
+        const aColor = new THREE.Color(0x000104);
+        const currentColor = sColor.clone().lerp(aColor, depthFactor);
+
+        uniforms.fogColor.value.copy(currentColor);
+
+        uniforms.ambientColor.value.copy(ambientLight.color);
+        uniforms.ambientIntensity.value = ambientLight.intensity;
+
+        uniforms.sunColor.value.copy(sunLight.color);
+        uniforms.sunIntensity.value = sunLight.intensity;
+
+        // Headlight Spotlight Sync
+        uniforms.headlightOn.value = player.headlightOn;
+        if (player.headlightOn) {
+          const noseOffset = new THREE.Vector3(0, -5, 15.15);
+          noseOffset.applyQuaternion(player.mesh.quaternion);
+          const spotlightPos = player.mesh.position.clone().add(noseOffset);
+          uniforms.headlightPosition.value.copy(spotlightPos);
+
+          player.mesh.updateMatrixWorld(true);
+          const targetWorldPos = new THREE.Vector3();
+          player.searchlightTarget.getWorldPosition(targetWorldPos);
+          const lightWorldPos = new THREE.Vector3();
+          player.searchlight.getWorldPosition(lightWorldPos);
+          const lightDir = targetWorldPos.clone().sub(lightWorldPos).normalize();
+          uniforms.headlightDirection.value.copy(lightDir);
+
+          uniforms.headlightColor.value.copy(player.searchlight.color);
+          uniforms.headlightIntensity.value = player.searchlight.intensity;
+          uniforms.headlightRange.value = player.searchlight.distance;
+          uniforms.headlightAngle.value = player.searchlight.angle;
+          uniforms.headlightPenumbra.value = player.searchlight.penumbra;
+        }
+      } else {
+        // Reset to default surface colors when paused/menu
+        uniforms.fogColor.value.setHex(0x041126);
+        uniforms.ambientColor.value.setHex(0x0d2b45);
+        uniforms.ambientIntensity.value = 1.5;
+        uniforms.sunColor.value.setHex(0xdcf4ff);
+        uniforms.sunIntensity.value = 2.5;
+        uniforms.headlightOn.value = false;
+      }
     }
-    
-    // 2. Animate god rays shimmering
+
+    // 2. Animate god rays shimmering (fade out with depth)
     if (this.godRaysGroup) {
       this.godRaysGroup.children.forEach(ray => {
         const t = time * ray.userData.speed + ray.userData.offset;
-        
+
         // Shimmer scale
         ray.scale.x = ray.userData.baseScaleX * (1.0 + Math.sin(t) * 0.25);
         ray.scale.z = ray.userData.baseScaleZ * (1.0 + Math.cos(t * 0.8) * 0.25);
-        
+
         // Swaying water motion
         ray.rotation.x = ray.userData.baseRotX + Math.sin(t * 0.5) * 0.08;
         ray.rotation.z = ray.userData.baseRotZ + Math.cos(t * 0.7) * 0.08;
-        
-        // Fade in/out independently
-        ray.material.opacity = ray.userData.baseOpacity * (0.7 + Math.sin(t * 1.2) * 0.3);
+
+        // Fade in/out independently, and fade out completely as we go deeper
+        ray.material.opacity = ray.userData.baseOpacity * (0.7 + Math.sin(t * 1.2) * 0.3) * (1.0 - depthFactor);
       });
     }
 
@@ -378,7 +480,7 @@ export class Environment {
         posAttr.array[i + 1] += delta * 0.4;
         // sway left/right
         posAttr.array[i] += Math.sin(time * 0.5 + i) * 0.02;
-        
+
         // Wrap particles if they float above surface (Y=0) or beyond horizontal bounds
         if (posAttr.array[i + 1] > 2) {
           posAttr.array[i + 1] = -42; // send to ocean bottom
