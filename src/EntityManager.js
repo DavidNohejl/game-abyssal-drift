@@ -631,7 +631,13 @@ export class EntityManager {
   }
 
   setGraphics(high) {
-    this.graphicsHigh = high;
+    this.setGraphicsLevel(high ? 'HIGH' : 'LOW');
+  }
+
+  setGraphicsLevel(level) {
+    this.graphicsLevel = level;
+    this.graphicsHigh = (level !== 'LOW');
+    const high = this.graphicsHigh;
     this.pearls.forEach(p => {
       if (p.light) p.light.visible = high;
     });

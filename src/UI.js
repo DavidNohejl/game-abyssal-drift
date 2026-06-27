@@ -17,6 +17,7 @@ export class UI {
       btnSoundToggle: document.getElementById('btn-sound-toggle'),
       btnGraphicsLow: document.getElementById('btn-graphics-low'),
       btnGraphicsHigh: document.getElementById('btn-graphics-high'),
+      btnGraphicsUltra: document.getElementById('btn-graphics-ultra'),
       mouseCheckbox: document.getElementById('mouse-control-checkbox'),
       o2Bar: document.getElementById('bar-oxygen'),
       o2Text: document.getElementById('text-oxygen'),
@@ -77,8 +78,11 @@ export class UI {
     this.dom.btnRestart.addEventListener('click', () => this.game.startGame());
     
     // Graphics setting buttons
-    this.dom.btnGraphicsLow.addEventListener('click', () => this.game.setGraphics(false));
-    this.dom.btnGraphicsHigh.addEventListener('click', () => this.game.setGraphics(true));
+    this.dom.btnGraphicsLow.addEventListener('click', () => this.game.setGraphicsLevel('LOW'));
+    this.dom.btnGraphicsHigh.addEventListener('click', () => this.game.setGraphicsLevel('HIGH'));
+    if (this.dom.btnGraphicsUltra) {
+      this.dom.btnGraphicsUltra.addEventListener('click', () => this.game.setGraphicsLevel('ULTRA'));
+    }
     
     // Sound toggle
     this.dom.btnSoundToggle.addEventListener('click', () => this.toggleSound());
@@ -192,9 +196,17 @@ export class UI {
     }
   }
 
-  setGraphicsUI(high) {
-    this.dom.btnGraphicsLow.classList.toggle('active', !high);
-    this.dom.btnGraphicsHigh.classList.toggle('active', high);
+  setGraphicsUI(level) {
+    let lvl = level;
+    if (typeof level === 'boolean') {
+      lvl = level ? 'HIGH' : 'LOW';
+    }
+
+    this.dom.btnGraphicsLow.classList.toggle('active', lvl === 'LOW');
+    this.dom.btnGraphicsHigh.classList.toggle('active', lvl === 'HIGH');
+    if (this.dom.btnGraphicsUltra) {
+      this.dom.btnGraphicsUltra.classList.toggle('active', lvl === 'ULTRA');
+    }
   }
 
   toggleSound() {

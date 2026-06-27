@@ -6,6 +6,13 @@ import { Environment } from './src/Environment.js';
 import { Player } from './src/Player.js';
 import { EntityManager } from './src/EntityManager.js';
 import { UI } from './src/UI.js';
+import { MarineSnow } from './src/MarineSnow.js';
+
+// Post-Processing Addons
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 // GAME STATE CONSTANTS
 const STATE_MENU = 'MENU';
@@ -18,6 +25,7 @@ class Game {
     window.game = this;
     this.state = STATE_MENU;
     this.graphicsHigh = true;
+    this.graphicsLevel = 'HIGH';
     this.time = 0;
     this.gameHasStarted = false;
     
@@ -60,6 +68,7 @@ class Game {
     this.player = new Player(this.scene);
     this.player.upgrades = this.upgrades; // sync loaded upgrades to player
     this.entityManager = new EntityManager(this.scene, this.graphicsHigh);
+    this.marineSnow = new MarineSnow(this.scene);
     
     // Initial spawn layout
     this.entityManager.spawnEntities((x, z) => this.environment.getTerrainHeight(x, z));
@@ -118,6 +127,9 @@ class Game {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      if (this.composer) {
+        this.composer.setSize(window.innerWidth, window.innerHeight);
+      }
     });
   }
 
@@ -156,15 +168,72 @@ class Game {
   }
 
   setGraphics(high) {
-    this.graphicsHigh = high;
-    this.ui.setGraphicsUI(high);
-    this.renderer.shadowMap.enabled = high;
-    
-    // Enable/disable shadows dynamically
-    this.sunLight.castShadow = high;
-    
-    this.player.setGraphics(high);
-    this.entityManager.setGraphics(high);
+    this.setGraphicsLevel(high ? 'HIGH' : 'LOW');
+  }
+
+  initPostProcessing() {
+    if (this.composer) return;
+
+    this.composer = new EffectComposer(this.renderer);
+
+    const renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(renderPass);
+
+    // Selective Bloom for emissives/light cores
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.35, // strength (subtle glow, down from 1.25)
+      0.65, // radius (softer falloff)
+      0.45  // threshold (prevent blooming the entire scene, up from 0.1)
+    );
+    this.composer.addPass(bloomPass);
+
+    // SMAA Anti-aliasing pass
+    const smaaPass = new SMAAPass(
+      window.innerWidth * this.renderer.getPixelRatio(),
+      window.innerHeight * this.renderer.getPixelRatio()
+    );
+    this.composer.addPass(smaaPass);
+  }
+
+  setGraphicsLevel(level) {
+    this.graphicsLevel = level; // 'LOW' | 'HIGH' | 'ULTRA'
+    this.graphicsHigh = (level !== 'LOW');
+
+    // Notify UI
+    this.ui.setGraphicsUI(level);
+
+    // Enable shadows for HIGH or ULTRA
+    const hasShadows = (level === 'HIGH' || level === 'ULTRA');
+    this.renderer.shadowMap.enabled = hasShadows;
+    this.sunLight.castShadow = hasShadows;
+
+    if (hasShadows) {
+      if (level === 'ULTRA') {
+        this.sunLight.shadow.mapSize.width = 2048;
+        this.sunLight.shadow.mapSize.height = 2048;
+      } else {
+        this.sunLight.shadow.mapSize.width = 1024;
+        this.sunLight.shadow.mapSize.height = 1024;
+      }
+      if (this.sunLight.shadow.map) {
+        this.sunLight.shadow.map.dispose();
+        this.sunLight.shadow.map = null;
+      }
+    }
+
+    // Setup composer if ULTRA
+    if (level === 'ULTRA') {
+      this.initPostProcessing();
+    }
+
+    // Sync other systems
+    this.player.setGraphicsLevel(level);
+    this.entityManager.setGraphicsLevel(level);
+
+    if (this.marineSnow) {
+      this.marineSnow.setVisible(level === 'ULTRA');
+    }
   }
 
   setGear(gear) {
@@ -498,8 +567,34 @@ class Game {
       }
     }
     
-    // Render Frame
-    this.renderer.render(this.scene, this.camera);
+    // Update Marine Snow particle field (Ultra graphics only)
+    if (this.marineSnow && this.marineSnow.visible) {
+      const sub = this.player.mesh;
+      const headlightPos = new THREE.Vector3();
+      const headlightDir = new THREE.Vector3(0, -0.2588, 0.9659).applyQuaternion(sub.quaternion);
+      
+      if (this.player.cameraMode === 1) {
+        headlightPos.set(0, -0.7, 3.2).applyMatrix4(sub.matrixWorld);
+      } else {
+        headlightPos.set(0, 0, 2.15).applyMatrix4(sub.matrixWorld);
+      }
+      
+      this.marineSnow.update(
+        delta,
+        this.time,
+        sub.position,
+        headlightPos,
+        headlightDir,
+        this.player.headlightOn && this.player.graphicsHigh
+      );
+    }
+
+    // Render Frame (using Post-Processing pipeline on Ultra settings)
+    if (this.graphicsLevel === 'ULTRA' && this.composer) {
+      this.composer.render(delta);
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   updateScanner(delta) {

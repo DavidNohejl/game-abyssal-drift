@@ -18,6 +18,7 @@ export class Player {
     this.direction = new THREE.Vector3(0, 0, 1);
     this.headlightOn = true;
     this.graphicsHigh = true;
+    this.graphicsLevel = 'HIGH';
     this.isDocked = false;
     this.dockCooldown = 0;
 
@@ -43,48 +44,50 @@ export class Player {
 
   createModel() {
     // 1. Sleek metallic hull material (dark steel/carbon grey - made less shiny and more matte)
-    const hullMat = new THREE.MeshStandardMaterial({
+    this.hullMat = new THREE.MeshStandardMaterial({
       color: 0x2d3a4b,
       roughness: 0.55,
       metalness: 0.35
     });
 
     // Accent safety orange/yellow trim material
-    const accentMat = new THREE.MeshStandardMaterial({
+    this.accentMat = new THREE.MeshStandardMaterial({
       color: 0xff8c00,
       roughness: 0.6,
       metalness: 0.25
     });
 
     // Glowing cyan neon/light material
-    const neonMat = new THREE.MeshBasicMaterial({
+    this.neonMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff
     });
+
+    this.windowGlasses = [];
 
     // 2. Main Hull (sleek cylindrical capsule shape)
     const hullGeo = new THREE.SphereGeometry(1.0, 16, 16);
     hullGeo.scale(0.85, 0.85, 2.2);
-    const hull = new THREE.Mesh(hullGeo, hullMat);
+    const hull = new THREE.Mesh(hullGeo, this.hullMat);
     hull.castShadow = true;
     hull.receiveShadow = true;
     this.mesh.add(hull);
 
     // 3. Conning Tower / Sail (safety orange accent)
     const towerGeo = new THREE.BoxGeometry(0.35, 0.6, 0.8);
-    const tower = new THREE.Mesh(towerGeo, accentMat);
+    const tower = new THREE.Mesh(towerGeo, this.accentMat);
     tower.position.set(0, 0.7, 0.2);
     tower.castShadow = true;
     this.mesh.add(tower);
 
     // Small periscope mast on conning tower
     const scopeGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8);
-    const scope = new THREE.Mesh(scopeGeo, hullMat);
+    const scope = new THREE.Mesh(scopeGeo, this.hullMat);
     scope.position.set(0, 1.1, 0.4);
     this.mesh.add(scope);
 
     // Glowing periscope lens tip
     const scopeTipGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const scopeTip = new THREE.Mesh(scopeTipGeo, neonMat);
+    const scopeTip = new THREE.Mesh(scopeTipGeo, this.neonMat);
     scopeTip.position.set(0, 1.25, 0.4);
     this.mesh.add(scopeTip);
 
@@ -108,22 +111,24 @@ export class Player {
       leftPorthole.position.set(r, 0.1, zOffset);
       leftPorthole.rotation.y = Math.PI / 2;
       
-      const leftFrame = new THREE.Mesh(frameGeo, hullMat);
-      const leftGlass = new THREE.Mesh(glassGeo, neonMat);
+      const leftFrame = new THREE.Mesh(frameGeo, this.hullMat);
+      const leftGlass = new THREE.Mesh(glassGeo, this.neonMat);
       leftPorthole.add(leftFrame);
       leftPorthole.add(leftGlass);
       this.mesh.add(leftPorthole);
+      this.windowGlasses.push(leftGlass);
 
       // Right side porthole (grouped frame + neon glass)
       const rightPorthole = new THREE.Group();
       rightPorthole.position.set(-r, 0.1, zOffset);
       rightPorthole.rotation.y = -Math.PI / 2;
       
-      const rightFrame = new THREE.Mesh(frameGeo, hullMat);
-      const rightGlass = new THREE.Mesh(glassGeo, neonMat);
+      const rightFrame = new THREE.Mesh(frameGeo, this.hullMat);
+      const rightGlass = new THREE.Mesh(glassGeo, this.neonMat);
       rightPorthole.add(rightFrame);
       rightPorthole.add(rightGlass);
       this.mesh.add(rightPorthole);
+      this.windowGlasses.push(rightGlass);
     }
 
     // 5. Headlight/Spotlight nose lens
@@ -204,7 +209,7 @@ export class Player {
     // 6. Thruster Nozzle & Propeller screw
     const nozzleGeo = new THREE.CylinderGeometry(0.4, 0.3, 0.4, 12);
     nozzleGeo.rotateX(Math.PI / 2);
-    const nozzle = new THREE.Mesh(nozzleGeo, hullMat);
+    const nozzle = new THREE.Mesh(nozzleGeo, this.hullMat);
     nozzle.position.set(0, 0, -2.1);
     this.mesh.add(nozzle);
 
@@ -251,7 +256,7 @@ export class Player {
     this.leftFin.position.set(planeR, 0, planeZ);
     const finGeo = new THREE.BoxGeometry(0.4, 0.03, 0.22);
     finGeo.translate(0.2, 0, 0); // pivot
-    const leftFinMesh = new THREE.Mesh(finGeo, accentMat);
+    const leftFinMesh = new THREE.Mesh(finGeo, this.accentMat);
     this.leftFin.add(leftFinMesh);
     this.mesh.add(this.leftFin);
 
@@ -260,7 +265,7 @@ export class Player {
     this.rightFin.position.set(-planeR, 0, planeZ);
     const finGeoRight = new THREE.BoxGeometry(0.4, 0.03, 0.22);
     finGeoRight.translate(-0.2, 0, 0);
-    const rightFinMesh = new THREE.Mesh(finGeoRight, accentMat);
+    const rightFinMesh = new THREE.Mesh(finGeoRight, this.accentMat);
     this.rightFin.add(rightFinMesh);
     this.mesh.add(this.rightFin);
 
@@ -269,7 +274,7 @@ export class Player {
     this.rudder.position.set(0, 0, -1.8);
     const rudderGeo = new THREE.BoxGeometry(0.03, 0.7, 0.25);
     rudderGeo.translate(0, 0.35, -0.125); // pivot at bottom-front
-    const rudderMesh = new THREE.Mesh(rudderGeo, accentMat);
+    const rudderMesh = new THREE.Mesh(rudderGeo, this.accentMat);
     this.rudder.add(rudderMesh);
     this.mesh.add(this.rudder);
 
@@ -278,7 +283,7 @@ export class Player {
     this.elevator.position.set(0, 0, -1.8);
     const elevatorGeo = new THREE.BoxGeometry(0.7, 0.03, 0.25);
     elevatorGeo.translate(0, 0, -0.125);
-    const elevatorMesh = new THREE.Mesh(elevatorGeo, accentMat);
+    const elevatorMesh = new THREE.Mesh(elevatorGeo, this.accentMat);
     this.elevator.add(elevatorMesh);
     this.mesh.add(this.elevator);
   }
@@ -346,16 +351,90 @@ export class Player {
   }
 
   setGraphics(high) {
-    this.graphicsHigh = high;
+    this.setGraphicsLevel(high ? 'HIGH' : 'LOW');
+  }
+
+  setGraphicsLevel(level) {
+    this.graphicsLevel = level;
+    this.graphicsHigh = (level !== 'LOW');
+    const hasShadows = (level === 'HIGH' || level === 'ULTRA');
+    
     this.mesh.traverse(child => {
       if (child.isMesh) {
-        child.castShadow = high;
-        child.receiveShadow = high;
+        child.castShadow = hasShadows;
+        child.receiveShadow = hasShadows;
       }
     });
+
     if (this.searchlight) {
-      this.searchlight.castShadow = high;
+      this.searchlight.castShadow = hasShadows;
+      if (hasShadows) {
+        if (level === 'ULTRA') {
+          this.searchlight.shadow.mapSize.width = 2048;
+          this.searchlight.shadow.mapSize.height = 2048;
+          this.searchlight.shadow.bias = -0.003;
+        } else {
+          this.searchlight.shadow.mapSize.width = 512;
+          this.searchlight.shadow.mapSize.height = 512;
+          this.searchlight.shadow.bias = -0.001;
+        }
+        if (this.searchlight.shadow.map) {
+          this.searchlight.shadow.map.dispose();
+          this.searchlight.shadow.map = null;
+        }
+      }
     }
+
+    // Phase 3: Physical Materials Clearcoat & Refractive Glass
+    if (this.hullMat && this.accentMat) {
+      if (level === 'ULTRA') {
+        // Ultra: Matte paint with clearcoat specular highlights
+        this.hullMat.roughness = 0.55;
+        this.hullMat.metalness = 0.35;
+        this.hullMat.clearcoat = 0.4;
+        this.hullMat.clearcoatRoughness = 0.15;
+        
+        this.accentMat.roughness = 0.6;
+        this.accentMat.metalness = 0.25;
+        this.accentMat.clearcoat = 0.45;
+        this.accentMat.clearcoatRoughness = 0.20;
+        
+        // Use physical refractive glass for windows
+        if (!this.physicalGlassMat) {
+          this.physicalGlassMat = new THREE.MeshPhysicalMaterial({
+            color: 0x00f0ff,
+            emissive: 0x0080a0,
+            emissiveIntensity: 0.7,
+            roughness: 0.1,
+            metalness: 0.1,
+            transmission: 0.95, // refract background
+            thickness: 0.4,
+            ior: 1.5,
+            transparent: true
+          });
+        }
+        
+        if (this.windowGlasses) {
+          this.windowGlasses.forEach(g => {
+            g.material = this.physicalGlassMat;
+          });
+        }
+      } else {
+        // Standard (High/Low): standard non-clearcoat paint
+        this.hullMat.clearcoat = 0.0;
+        this.accentMat.clearcoat = 0.0;
+        
+        // Restore standard glowing neon
+        if (this.windowGlasses && this.neonMat) {
+          this.windowGlasses.forEach(g => {
+            g.material = this.neonMat;
+          });
+        }
+      }
+      this.hullMat.needsUpdate = true;
+      this.accentMat.needsUpdate = true;
+    }
+
     this.updateHeadlightVisibility();
   }
 
