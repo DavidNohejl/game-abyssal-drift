@@ -5,6 +5,7 @@ export class Input {
     this.mouseControl = false;
     this.mouse = { x: 0, y: 0 };
     this.joystick = { x: 0, y: 0, active: false };
+    this.freeLook = { active: false, yaw: 0, pitch: 0 };
     
     this.setupEvents(mouseCheckbox);
     this.setupTouchEvents();
@@ -47,6 +48,33 @@ export class Input {
     window.addEventListener('mousemove', (e) => {
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      if (this.freeLook.active) {
+        this.freeLook.yaw += e.movementX * 0.007;
+        this.freeLook.pitch -= e.movementY * 0.007;
+        // Clamp pitch to prevent flipping upside down
+        this.freeLook.pitch = Math.max(-1.1, Math.min(1.1, this.freeLook.pitch));
+      }
+    });
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 2) { // Right click
+        this.freeLook.active = true;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 2) {
+        this.freeLook.active = false;
+      }
+    });
+
+    window.addEventListener('mouseleave', () => {
+      this.freeLook.active = false;
+    });
+
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault(); // Prevent right-click browser menu during gameplay
     });
   }
 

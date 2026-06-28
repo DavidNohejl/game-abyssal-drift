@@ -31,6 +31,8 @@ export class Player {
     this.autopilotActive = false;
     this.cameraMode = 0; // 0: Chase, 1: First-Person, 2: Top-Down, 3: Side Cinematic
     this.autopilotStatus = "OFFLINE";
+    this.freeLookYaw = 0;
+    this.freeLookPitch = 0;
 
     // Bubble Pool for exhaust bubbles
     this.bubblePool = [];
@@ -62,15 +64,102 @@ export class Player {
       color: 0x00f0ff
     });
 
+    // Procedural Carbon Fiber weave texture generator for Ultra settings
+    const canvas = document.createElement('canvas');
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 16, 16);
+    ctx.fillStyle = '#111111';
+    ctx.fillRect(0, 0, 8, 8);
+    ctx.fillRect(8, 8, 8, 8);
+    
+    this.carbonBumpTex = new THREE.CanvasTexture(canvas);
+    this.carbonBumpTex.wrapS = THREE.RepeatWrapping;
+    this.carbonBumpTex.wrapT = THREE.RepeatWrapping;
+    this.carbonBumpTex.repeat.set(24, 12);
+
+    // Deck safety pipes/cables (orange tubes running on the top flanks of the hull capsule)
+    const pipeGeo = new THREE.CylinderGeometry(0.015, 0.015, 1.3, 6);
+    pipeGeo.rotateX(Math.PI / 2);
+    
+    // Left safety deck pipe
+    this.leftPipe = new THREE.Mesh(pipeGeo, this.accentMat);
+    this.leftPipe.position.set(0.28, 0.45, 0.9);
+    this.leftPipe.rotation.x = 0.08; // slightly slanted forward-down
+    this.mesh.add(this.leftPipe);
+    
+    // Right safety deck pipe
+    this.rightPipe = new THREE.Mesh(pipeGeo, this.accentMat);
+    this.rightPipe.position.set(-0.28, 0.45, 0.9);
+    this.rightPipe.rotation.x = 0.08;
+    this.mesh.add(this.rightPipe);
+
     this.windowGlasses = [];
 
-    // 2. Main Hull (sleek cylindrical capsule shape)
-    const hullGeo = new THREE.SphereGeometry(1.0, 16, 16);
-    hullGeo.scale(0.85, 0.85, 2.2);
-    const hull = new THREE.Mesh(hullGeo, this.hullMat);
-    hull.castShadow = true;
-    hull.receiveShadow = true;
-    this.mesh.add(hull);
+    // 2. Main Hull (Cut-open capsule shape with hollow cockpit section)
+    this.hull = new THREE.Group();
+    this.mesh.add(this.hull);
+
+    // Rear Endcap Dome (Z = -1.0 to -1.85)
+    const rearCapGeo = new THREE.SphereGeometry(0.85, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    rearCapGeo.rotateX(-Math.PI / 2); // point backward
+    const rearCap = new THREE.Mesh(rearCapGeo, this.hullMat);
+    rearCap.position.set(0, 0, -1.0);
+    rearCap.castShadow = true;
+    rearCap.receiveShadow = true;
+    this.hull.add(rearCap);
+
+    // Main Mid Body Cylinder (Z = -1.0 to 1.0)
+    const bodyCylGeo = new THREE.CylinderGeometry(0.85, 0.85, 2.0, 16);
+    bodyCylGeo.rotateX(Math.PI / 2);
+    const bodyCyl = new THREE.Mesh(bodyCylGeo, this.hullMat);
+    bodyCyl.position.set(0, 0, 0);
+    bodyCyl.castShadow = true;
+    bodyCyl.receiveShadow = true;
+    this.hull.add(bodyCyl);
+
+    // Front Nose Taper Cone (Z = 1.0 to 1.7 - open-ended to fit the cockpit)
+    const frontTaperGeo = new THREE.CylinderGeometry(0.52, 0.85, 0.7, 16, 1, true);
+    frontTaperGeo.rotateX(Math.PI / 2);
+    const frontTaper = new THREE.Mesh(frontTaperGeo, this.hullMat);
+    frontTaper.position.set(0, 0, 1.35);
+    frontTaper.castShadow = true;
+    frontTaper.receiveShadow = true;
+    this.hull.add(frontTaper);
+
+    // Raised safety orange metallic structural ribs/bands
+    this.hullRibs = [];
+    const ribPositions = [0.85, -0.85];
+    ribPositions.forEach(zOffset => {
+      const zRatio = zOffset / 2.2;
+      const r = 0.85 * Math.sqrt(Math.max(0.1, 1.0 - zRatio * zRatio));
+      
+      const ribGeo = new THREE.CylinderGeometry(r + 0.015, r + 0.015, 0.06, 16, 1, true);
+      ribGeo.rotateX(Math.PI / 2);
+      const rib = new THREE.Mesh(ribGeo, this.accentMat);
+      rib.position.set(0, 0, zOffset);
+      rib.castShadow = true;
+      rib.receiveShadow = true;
+      this.mesh.add(rib);
+      this.hullRibs.push(rib);
+    });
+
+    // Glowing Neon Side Decals/Stripes along flanks
+    this.neonStripes = [];
+    const stripeGeo = new THREE.CylinderGeometry(0.018, 0.018, 1.2, 6);
+    stripeGeo.rotateX(Math.PI / 2);
+    
+    const leftStripe = new THREE.Mesh(stripeGeo, this.neonMat);
+    leftStripe.position.set(0.85 + 0.01, -0.15, 0.0);
+    this.mesh.add(leftStripe);
+    this.neonStripes.push(leftStripe);
+    
+    const rightStripe = new THREE.Mesh(stripeGeo, this.neonMat);
+    rightStripe.position.set(-0.85 - 0.01, -0.15, 0.0);
+    this.mesh.add(rightStripe);
+    this.neonStripes.push(rightStripe);
 
     // 3. Conning Tower / Sail (safety orange accent)
     const towerGeo = new THREE.BoxGeometry(0.35, 0.6, 0.8);
@@ -79,17 +168,25 @@ export class Player {
     tower.castShadow = true;
     this.mesh.add(tower);
 
-    // Small periscope mast on conning tower
-    const scopeGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8);
-    const scope = new THREE.Mesh(scopeGeo, this.hullMat);
-    scope.position.set(0, 1.1, 0.4);
-    this.mesh.add(scope);
+    // High-tech Instrument Mast & Dual Antennae Masts
+    const mastGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.5, 8);
+    const antennaLeft = new THREE.Mesh(mastGeo, this.hullMat);
+    antennaLeft.position.set(0.08, 1.25, 0.35);
+    this.mesh.add(antennaLeft);
 
-    // Glowing periscope lens tip
-    const scopeTipGeo = new THREE.SphereGeometry(0.04, 8, 8);
-    const scopeTip = new THREE.Mesh(scopeTipGeo, this.neonMat);
-    scopeTip.position.set(0, 1.25, 0.4);
-    this.mesh.add(scopeTip);
+    const antennaRight = new THREE.Mesh(mastGeo, this.hullMat);
+    antennaRight.position.set(-0.08, 1.25, 0.35);
+    this.mesh.add(antennaRight);
+
+    // Blinking strobe tip lights (warning lights on masts)
+    const strobeGeo = new THREE.SphereGeometry(0.035, 8, 8);
+    this.blueStrobe = new THREE.Mesh(strobeGeo, new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+    this.blueStrobe.position.set(0.08, 1.5, 0.35);
+    this.mesh.add(this.blueStrobe);
+
+    this.redStrobe = new THREE.Mesh(strobeGeo, new THREE.MeshBasicMaterial({ color: 0xff3333 }));
+    this.redStrobe.position.set(-0.08, 1.5, 0.35);
+    this.mesh.add(this.redStrobe);
 
     // 4. Glowing Portholes / Windows with metallic outer frames (3 along each side)
     const frameGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.03, 12);
@@ -131,12 +228,75 @@ export class Player {
       this.windowGlasses.push(rightGlass);
     }
 
-    // 5. Headlight/Spotlight nose lens
-    // const lensGeo = new THREE.SphereGeometry(0.35, 12, 12);
-    // lensGeo.scale(1.0, 1.0, 0.3); // flat lens cap
-    // const lens = new THREE.Mesh(lensGeo, neonMat);
-    // lens.position.set(0, 0, 2.15); // nose tip
-    // this.mesh.add(lens);
+    // 5. Panoramic Cockpit Nose Dome Viewport & Interior Cockpit Group
+    this.cockpitGroup = new THREE.Group();
+    this.mesh.add(this.cockpitGroup);
+
+    // Large glass cupola dome (matches the sleek capsule frontend at Z=1.7)
+    const noseDomeGeo = new THREE.SphereGeometry(0.52, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    noseDomeGeo.rotateX(Math.PI / 2); // point forward
+    this.noseDome = new THREE.Mesh(noseDomeGeo, this.neonMat);
+    this.noseDome.position.set(0, 0, 1.7); // starts exactly at Z = 1.7 nose ring opening
+    this.cockpitGroup.add(this.noseDome);
+    this.windowGlasses.push(this.noseDome);
+
+    // Materials for interior pilot, chair, and dashboard
+    const chairMat = new THREE.MeshStandardMaterial({ color: 0x151515, metalness: 0.1, roughness: 0.8 });
+    const suitMat = new THREE.MeshStandardMaterial({ color: 0xdd5500, metalness: 0.1, roughness: 0.6 }); // safety orange spacesuit
+    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.2, roughness: 0.4 });
+    const dashboardMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.5, roughness: 0.5 });
+
+    // Seat base
+    const seatBase = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.16), chairMat);
+    seatBase.position.set(0, -0.22, 1.55);
+    this.cockpitGroup.add(seatBase);
+
+    // Seat back
+    const seatBack = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.04), chairMat);
+    seatBack.position.set(0, -0.08, 1.48);
+    seatBack.rotation.x = -0.15; // tilted back
+    this.cockpitGroup.add(seatBack);
+
+    // Pilot Torso
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 6), suitMat);
+    torso.position.set(0, -0.08, 1.55);
+    torso.rotation.x = 0.1;
+    this.cockpitGroup.add(torso);
+
+    // Pilot Helmet/Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.052, 8, 8), helmetMat);
+    head.position.set(0, 0.04, 1.55);
+    this.cockpitGroup.add(head);
+
+    // Helmet glowing visor stripe (futuristic spacesuit look)
+    const visorGeo = new THREE.SphereGeometry(0.053, 8, 8, 0, Math.PI, 0.3, 0.5);
+    visorGeo.rotateX(Math.PI / 2);
+    const visor = new THREE.Mesh(visorGeo, new THREE.MeshBasicMaterial({ color: 0x00f0ff }));
+    visor.position.set(0, 0.045, 1.55);
+    this.cockpitGroup.add(visor);
+
+    // Pilot Arms
+    const armLeft = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.12), suitMat);
+    armLeft.position.set(0.08, -0.08, 1.60);
+    armLeft.rotation.y = 0.2;
+    this.cockpitGroup.add(armLeft);
+
+    const armRight = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.12), suitMat);
+    armRight.position.set(-0.08, -0.08, 1.60);
+    armRight.rotation.y = -0.2;
+    this.cockpitGroup.add(armRight);
+
+    // Dashboard Console
+    const consoleBox = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.12), dashboardMat);
+    consoleBox.position.set(0, -0.22, 1.73);
+    this.cockpitGroup.add(consoleBox);
+
+    // Console screen plane (glowing neon green dashboard)
+    const screenGeo = new THREE.PlaneGeometry(0.13, 0.07);
+    screenGeo.rotateX(-Math.PI / 4); // angled towards pilot
+    const consoleScreen = new THREE.Mesh(screenGeo, new THREE.MeshBasicMaterial({ color: 0x00ffaa }));
+    consoleScreen.position.set(0, -0.165, 1.69);
+    this.cockpitGroup.add(consoleScreen);
 
     // Spotlight pointing forward and tilted downwards (stronger, longer range, highly focused)
     this.searchlight = new THREE.SpotLight(0x00ffff, 45.0, 85, Math.PI / 12, 0.8, 1.0);
@@ -245,6 +405,17 @@ export class Player {
       this.propellerGroup.add(blade);
     }
     this.mesh.add(this.propellerGroup);
+
+    // Ducted Shroud around propeller screw (ducted fan propulsion)
+    const ductGeo = new THREE.CylinderGeometry(0.72, 0.72, 0.35, 12, 1, true);
+    ductGeo.rotateX(Math.PI / 2);
+    this.ductMat = this.hullMat.clone();
+    this.ductMat.side = THREE.DoubleSide; // prevent back-face culling/disappearing
+    const duct = new THREE.Mesh(ductGeo, this.ductMat);
+    duct.position.set(0, 0, -2.35);
+    duct.castShadow = true;
+    duct.receiveShadow = true;
+    this.mesh.add(duct);
 
     // 7. Stabilizing Control Surfaces (Fins, rudders, elevators)
     // Calculate tapered hull width at Z = 1.25 for front diving planes (in front of windows)
@@ -388,16 +559,27 @@ export class Player {
     // Phase 3: Physical Materials Clearcoat & Refractive Glass
     if (this.hullMat && this.accentMat) {
       if (level === 'ULTRA') {
-        // Ultra: Matte paint with clearcoat specular highlights
+        // Ultra: Matte paint with clearcoat specular highlights and carbon fiber texture bumpmap
         this.hullMat.roughness = 0.55;
         this.hullMat.metalness = 0.35;
         this.hullMat.clearcoat = 0.4;
         this.hullMat.clearcoatRoughness = 0.15;
+        this.hullMat.bumpMap = this.carbonBumpTex;
+        this.hullMat.bumpScale = 0.012;
         
         this.accentMat.roughness = 0.6;
         this.accentMat.metalness = 0.25;
         this.accentMat.clearcoat = 0.45;
         this.accentMat.clearcoatRoughness = 0.20;
+
+        if (this.ductMat) {
+          this.ductMat.roughness = 0.55;
+          this.ductMat.metalness = 0.35;
+          this.ductMat.clearcoat = 0.4;
+          this.ductMat.clearcoatRoughness = 0.15;
+          this.ductMat.bumpMap = this.carbonBumpTex;
+          this.ductMat.bumpScale = 0.012;
+        }
         
         // Use physical refractive glass for windows
         if (!this.physicalGlassMat) {
@@ -420,9 +602,15 @@ export class Player {
           });
         }
       } else {
-        // Standard (High/Low): standard non-clearcoat paint
+        // Standard (High/Low): standard non-clearcoat paint, no bumpmap
         this.hullMat.clearcoat = 0.0;
+        this.hullMat.bumpMap = null;
         this.accentMat.clearcoat = 0.0;
+
+        if (this.ductMat) {
+          this.ductMat.clearcoat = 0.0;
+          this.ductMat.bumpMap = null;
+        }
         
         // Restore standard glowing neon
         if (this.windowGlasses && this.neonMat) {
@@ -433,6 +621,12 @@ export class Player {
       }
       this.hullMat.needsUpdate = true;
       this.accentMat.needsUpdate = true;
+    }
+
+    if (this.neonStripes) {
+      this.neonStripes.forEach(s => {
+        s.visible = this.graphicsHigh;
+      });
     }
 
     this.updateHeadlightVisibility();
@@ -794,6 +988,18 @@ export class Player {
     // 7. MULTI-ANGLE TRACKING CAMERA
     let camOffsetLocal, lookOffsetLocal;
 
+    // Smoothly interpolate free-look orbit angles based on right-click drag pan inputs
+    if (input.freeLook && input.freeLook.active) {
+      this.freeLookYaw = input.freeLook.yaw;
+      this.freeLookPitch = input.freeLook.pitch;
+    } else if (input.freeLook) {
+      // Smoothly return to center position behind submarine on release
+      input.freeLook.yaw += (0 - input.freeLook.yaw) * 6.0 * delta;
+      input.freeLook.pitch += (0 - input.freeLook.pitch) * 6.0 * delta;
+      this.freeLookYaw = input.freeLook.yaw;
+      this.freeLookPitch = input.freeLook.pitch;
+    }
+
     switch (this.cameraMode) {
       case 1: // First-Person / Porthole View
         camOffsetLocal = new THREE.Vector3(0, 0.3, 1.2);
@@ -811,8 +1017,22 @@ export class Player {
       default:
         camOffsetLocal = new THREE.Vector3(0, 2.5, -9.5);
         lookOffsetLocal = new THREE.Vector3(0, 0.2, 4.0);
+        
+        // Orbit camera around submarine based on right-click free-look angles
+        if (Math.abs(this.freeLookYaw) > 0.001 || Math.abs(this.freeLookPitch) > 0.001) {
+          const orbitRotation = new THREE.Euler(this.freeLookPitch, this.freeLookYaw, 0, 'YXZ');
+          camOffsetLocal.applyEuler(orbitRotation);
+        }
         break;
     }
+
+    const isFirstPerson = (this.cameraMode === 1);
+    if (this.hull) this.hull.visible = !isFirstPerson;
+    if (this.leftPipe) this.leftPipe.visible = !isFirstPerson;
+    if (this.rightPipe) this.rightPipe.visible = !isFirstPerson;
+    if (this.leftFin) this.leftFin.visible = !isFirstPerson;
+    if (this.rightFin) this.rightFin.visible = !isFirstPerson;
+    if (this.cockpitGroup) this.cockpitGroup.visible = !isFirstPerson;
 
     const camOffset = camOffsetLocal.applyQuaternion(sub.quaternion);
     const targetCamPos = sub.position.clone().add(camOffset);
@@ -841,6 +1061,13 @@ export class Player {
     // Drain oxygen (life support battery) slowly
     const o2DrainMult = 1.0 - (this.upgrades.oxygen || 0) * 0.20;
     this.oxygen = Math.max(0, this.oxygen - delta * 1.15 * o2DrainMult);
+
+    // warning strobe beacons blink out-of-phase (Ultra/High graphics setting warning beacon animations)
+    if (this.blueStrobe && this.redStrobe) {
+      const show = this.graphicsHigh;
+      this.blueStrobe.visible = show && (Math.floor(time * 2.8) % 2 === 0);
+      this.redStrobe.visible = show && (Math.floor(time * 2.8 + 1) % 2 === 0);
+    }
   }
 
   updateMenuAnimation(time, delta, camera) {
@@ -849,6 +1076,13 @@ export class Player {
 
     // Propeller spin
     this.propellerGroup.rotation.z += 4.0 * delta;
+
+    // Warning strobes blink out-of-phase on menu background
+    if (this.blueStrobe && this.redStrobe) {
+      const show = this.graphicsHigh;
+      this.blueStrobe.visible = show && (Math.floor(time * 2.8) % 2 === 0);
+      this.redStrobe.visible = show && (Math.floor(time * 2.8 + 1) % 2 === 0);
+    }
 
     // Reset control surfaces
     this.rudder.rotation.y = 0;
