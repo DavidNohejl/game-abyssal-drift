@@ -33,6 +33,8 @@ export class Player {
     this.autopilotStatus = "OFFLINE";
     this.freeLookYaw = 0;
     this.freeLookPitch = 0;
+    this.lastTurnBackMsgTime = 0;
+    this.totalPearlsCollected = 0;
 
     // Bubble Pool for exhaust bubbles
     this.bubblePool = [];
@@ -548,6 +550,7 @@ export class Player {
     this.oxygen = 100;
     this.depth = 0;
     this.maxDepth = 0;
+    this.totalPearlsCollected = 0;
     this.velocity.set(0, 0, 0);
     this.direction.set(0, 0, 1);
     this.selectedGear = 2; // start back at cruise
@@ -709,6 +712,7 @@ export class Player {
 
   collectPearl() {
     this.score++;
+    this.totalPearlsCollected++;
     this.oxygen = Math.min(100, this.oxygen + 18.0);
   }
 
@@ -994,6 +998,14 @@ export class Player {
     if (distFromOrigin > arenaRadius) {
       const push = new THREE.Vector3(-sub.position.x, 0, -sub.position.z).normalize().multiplyScalar(delta * 12);
       sub.position.add(push);
+
+      // Pop rate-limited warning message
+      if (time - this.lastTurnBackMsgTime > 4.0) {
+        if (typeof triggerSurfaceBanner === 'function') {
+          triggerSurfaceBanner("⚠️ WARNING: TURN BACK ⚠️");
+        }
+        this.lastTurnBackMsgTime = time;
+      }
     }
 
     // SUBMARINE KINEMATIC ANIMATIONS

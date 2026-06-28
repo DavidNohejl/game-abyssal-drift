@@ -1,4 +1,4 @@
-// ABYSSAL DRIFT - 3D Ocean Game Logic
+// REEFNAUT - 3D Ocean Game Logic
 import * as THREE from 'three';
 import { audio } from './audio.js';
 import { Input } from './src/Input.js';
@@ -40,6 +40,8 @@ class Game {
     this.scanProgress = 0;
     this.lastScanToneTime = 0;
     this.headlightOn = true;
+    this.runTime = 0;
+    this.victoryAchieved = false;
     
     // Init graphics context
     this.initThree();
@@ -134,7 +136,7 @@ class Game {
   }
 
   loadDatabase() {
-    const saved = localStorage.getItem('abyssal_drift_db');
+    const saved = localStorage.getItem('reefnaut_db');
     if (saved) {
       try {
         this.database = JSON.parse(saved);
@@ -147,11 +149,11 @@ class Game {
   }
 
   saveDatabase() {
-    localStorage.setItem('abyssal_drift_db', JSON.stringify(this.database));
+    localStorage.setItem('reefnaut_db', JSON.stringify(this.database));
   }
 
   loadUpgrades() {
-    const saved = localStorage.getItem('abyssal_drift_upgrades');
+    const saved = localStorage.getItem('reefnaut_upgrades');
     if (saved) {
       try {
         this.upgrades = JSON.parse(saved);
@@ -164,7 +166,7 @@ class Game {
   }
 
   saveUpgrades() {
-    localStorage.setItem('abyssal_drift_upgrades', JSON.stringify(this.upgrades));
+    localStorage.setItem('reefnaut_upgrades', JSON.stringify(this.upgrades));
   }
 
   setGraphics(high) {
@@ -327,7 +329,11 @@ class Game {
       
       // Re-render UI
       this.ui.renderResearch(this.upgrades, this.player.score);
-      this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score);
+      const scanned = Object.values(this.database).filter(v => v).length;
+      const totalScan = 6;
+      const upgradesCount = this.upgrades.speed + this.upgrades.oxygen + (this.upgrades.autopilot ? 1 : 0);
+      const totalUpgrades = 7;
+      this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score, scanned, totalScan, upgradesCount, totalUpgrades, this.runTime);
     }
   }
 
@@ -370,8 +376,8 @@ class Game {
 
   resetAllProgress() {
     // Clear permanent saves
-    localStorage.removeItem('abyssal_drift_db');
-    localStorage.removeItem('abyssal_drift_upgrades');
+    localStorage.removeItem('reefnaut_db');
+    localStorage.removeItem('reefnaut_upgrades');
     
     // Reset internal structures
     this.database = { pearl: false, jellyfish: false, kelp: false, rock: false, fish: false, shark: false };
@@ -388,13 +394,23 @@ class Game {
     // Reset game state trackers
     this.gameHasStarted = true;
     this.state = STATE_PLAYING;
+    this.runTime = 0;
+    this.victoryAchieved = false;
     
+    // Hide overlay screens
+    if (this.ui.dom.victoryScreen) {
+      this.ui.dom.victoryScreen.classList.add('hidden');
+    }
+    if (this.ui.dom.gameOverScreen) {
+      this.ui.dom.gameOverScreen.classList.add('hidden');
+    }
+
     // Update UI elements
     this.ui.updateStartButton(true);
     this.ui.showHUD();
     this.ui.renderDatabase(this.database);
     this.ui.renderResearch(this.upgrades, this.player.score);
-    this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score);
+    this.ui.updateHUD(this.player.oxygen, this.player.depth, this.player.score, 0, 6, 0, 7, 0);
     
     // Direct visual feedback
     this.ui.triggerSurfaceBanner("PROGRESS RESET & FRESH START");
@@ -429,7 +445,18 @@ class Game {
     
     this.state = STATE_PLAYING;
     this.gameHasStarted = true;
+    this.runTime = 0;
+    this.victoryAchieved = false;
     this.ui.updateStartButton(true);
+    
+    // Hide overlay screens
+    if (this.ui.dom.victoryScreen) {
+      this.ui.dom.victoryScreen.classList.add('hidden');
+    }
+    if (this.ui.dom.gameOverScreen) {
+      this.ui.dom.gameOverScreen.classList.add('hidden');
+    }
+
     this.player.reset();
     this.player.upgrades = this.upgrades; // sync loaded upgrades to player
     this.headlightOn = true;
@@ -455,6 +482,23 @@ class Game {
     
     // UI transition
     this.ui.showHUD();
+  }
+
+  triggerVictory() {
+    this.victoryAchieved = true;
+    this.state = STATE_GAMEOVER; // Freeze updates
+    this.gameHasStarted = false;
+    this.ui.updateStartButton(false);
+    
+    // Play triumphant pentatonic chime arpeggio
+    audio.playVictory();
+    
+    // Show victory modal overlay
+    this.ui.showVictory(this.runTime, this.player.totalPearlsCollected);
+    
+    // Hide scanner highlights
+    this.scanRing.visible = false;
+    this.scanLaser.visible = false;
   }
 
   gameOver() {
@@ -489,7 +533,7 @@ class Game {
         this.camera,
         this.camLight,
         this.sunLight,
-        () => this.ui.triggerSurfaceBanner()
+        (txt) => this.ui.triggerSurfaceBanner(txt)
       );
 
       // Dynamic depth-based lighting and fog (abyss gets darker)
@@ -509,13 +553,35 @@ class Game {
       this.sunLight.intensity = THREE.MathUtils.lerp(1.2, 0.0, depthFactor);
       this.camLight.intensity = THREE.MathUtils.lerp(0.65, 0.15, depthFactor);
       
+      // Increment speedrun stopwatch
+      if (!this.victoryAchieved) {
+        this.runTime += delta;
+      }
+
       this.entityManager.update(this.time, delta);
       this.checkCollisions();
+
+      // Calculate speedrun dashboard counts
+      const scanned = Object.values(this.database).filter(v => v).length;
+      const totalScan = 6;
+      const upgradesCount = this.upgrades.speed + this.upgrades.oxygen + (this.upgrades.autopilot ? 1 : 0);
+      const totalUpgrades = 7;
+
       this.ui.updateHUD(
         this.player.oxygen,
         this.player.depth,
-        this.player.score
+        this.player.score,
+        scanned,
+        totalScan,
+        upgradesCount,
+        totalUpgrades,
+        this.runTime
       );
+
+      // Speedrun Victory Check: all 6 species scanned, all 7 upgrades bought
+      if (scanned === totalScan && upgradesCount === totalUpgrades && !this.victoryAchieved) {
+        this.triggerVictory();
+      }
       
       const forwardDir = new THREE.Vector3(0, 0, 1).applyQuaternion(this.player.mesh.quaternion);
       const playerYaw = Math.atan2(forwardDir.x, forwardDir.z);
@@ -620,11 +686,11 @@ class Game {
     // Gather all scanable targets in the scene
     const scanables = [
       ...this.entityManager.pearls.map(p => ({ mesh: p.mesh, type: 'pearl', name: 'Bioluminescent Pearl' })),
-      ...this.entityManager.jellyfish.map(j => ({ mesh: j.mesh, type: 'jellyfish', name: 'Abyssal Jellyfish' })),
-      ...this.entityManager.kelps.map(k => ({ mesh: k, type: 'kelp', name: 'Abyssal Kelp Forest' })),
+      ...this.entityManager.jellyfish.map(j => ({ mesh: j.mesh, type: 'jellyfish', name: 'Moon Jellyfish' })),
+      ...this.entityManager.kelps.map(k => ({ mesh: k, type: 'kelp', name: 'Kelp Forest' })),
       ...this.entityManager.rocks.map(r => ({ mesh: r, type: 'rock', name: 'Volcanic Coral Rock' })),
-      ...this.entityManager.fish.map(f => ({ mesh: f.mesh, type: 'fish', name: 'Abyssal Schooling Fish' })),
-      ...this.entityManager.sharks.map(s => ({ mesh: s.mesh, type: 'shark', name: 'Abyssal Solitary Shark' }))
+      ...this.entityManager.fish.map(f => ({ mesh: f.mesh, type: 'fish', name: 'Schooling Fish' })),
+      ...this.entityManager.sharks.map(s => ({ mesh: s.mesh, type: 'shark', name: 'Reef Shark' }))
     ];
     
     scanables.forEach(obj => {

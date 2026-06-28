@@ -1,4 +1,4 @@
-/* ABYSSAL DRIFT - Custom Style Sheets */
+/* REEFNAUT - Custom Style Sheets */
 
 :root {
   --bg-dark: #050c18;
@@ -504,14 +504,15 @@ input:checked+.slider:before {
 .hud-right {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .hud-btn {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
   color: var(--color-text);
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 14px;
   cursor: pointer;
   display: flex;
@@ -521,6 +522,7 @@ input:checked+.slider:before {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .hud-btn:hover {
@@ -533,6 +535,65 @@ input:checked+.slider:before {
 
 .hud-btn:active {
   transform: translateY(0);
+}
+
+/* Pill-shaped grouped HUD control strip */
+.hud-pill-group {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.hud-pill-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-glass);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  transition: all 0.22s ease;
+  min-width: 54px;
+  position: relative;
+}
+
+.hud-pill-btn:last-child {
+  border-right: none;
+}
+
+.hud-pill-btn svg {
+  transition: color 0.22s;
+}
+
+.hud-pill-btn span {
+  font-family: var(--font-title);
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hud-pill-btn:hover {
+  background: rgba(0, 255, 200, 0.08);
+  color: var(--color-primary);
+}
+
+.hud-pill-btn:hover svg {
+  color: var(--color-primary);
+}
+
+.hud-pill-btn:active {
+  background: rgba(0, 255, 200, 0.15);
 }
 
 .sound-icon {
@@ -2103,4 +2164,30 @@ input:checked+.slider:before {
   .control-item-mobile .mobile-icon {
     font-size: 0.95rem;
   }
+}
+
+/* MISSION SPEEDRUN DASHBOARD PANEL */
+.mission-dashboard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  min-width: 250px;
+}
+
+.dash-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }

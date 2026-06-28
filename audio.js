@@ -1,4 +1,4 @@
-// ABYSSAL DRIFT - Procedural Web Audio Engine
+// REEFNAUT - Procedural Web Audio Engine
 
 class SoundEngine {
   constructor() {
@@ -490,6 +490,33 @@ class SoundEngine {
     gainNode.connect(this.masterGain);
     osc.start(now);
     osc.stop(now + 0.24);
+  }
+
+  // Triumphant victory arpeggio (C5 pentatonic arpeggio climbing to C7)
+  playVictory() {
+    if (!this.initialized || !this.enabled) return;
+
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00]; // C5, E5, G5, C6, E6, G6, C7
+    
+    notes.forEach((freq, idx) => {
+      const time = now + idx * 0.06;
+      
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+      
+      const gainNode = this.ctx.createGain();
+      gainNode.gain.setValueAtTime(0.001, time);
+      gainNode.gain.linearRampToValueAtTime(0.22, time + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+      
+      osc.connect(gainNode);
+      gainNode.connect(this.masterGain);
+      
+      osc.start(time);
+      osc.stop(time + 0.52);
+    });
   }
 }
 

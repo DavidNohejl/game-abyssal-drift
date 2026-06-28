@@ -4,7 +4,7 @@ export class UI {
   constructor(game) {
     this.game = game;
     this.soundMuted = false;
-    
+
     // Setup Dom references
     this.dom = {
       startScreen: document.getElementById('start-screen'),
@@ -54,11 +54,18 @@ export class UI {
       scannerTargetInfo: document.getElementById('scanner-target-info'),
       scannerTag: document.getElementById('scanner-tag'),
       sonarCanvas: document.getElementById('sonar-canvas'),
+      statScanProgress: document.getElementById('stat-scan-progress'),
+      statUpgradesProgress: document.getElementById('stat-upgrades-progress'),
+      statRunTimer: document.getElementById('stat-run-timer'),
+      victoryScreen: document.getElementById('victory-screen'),
+      victoryTime: document.getElementById('victory-time'),
+      victoryPearls: document.getElementById('victory-pearls'),
+      btnVictoryRestart: document.getElementById('btn-victory-restart'),
     };
-    
+
     this.sonarSweepAngle = 0;
     this.sonarCtx = this.dom.sonarCanvas ? this.dom.sonarCanvas.getContext('2d') : null;
-    
+
     this.setupEvents();
   }
 
@@ -75,15 +82,20 @@ export class UI {
 
     // Game start controls
     this.dom.btnStart.addEventListener('click', () => this.game.handleStartButtonClick());
-    this.dom.btnRestart.addEventListener('click', () => this.game.startGame());
-    
+    this.dom.btnRestart.addEventListener('click', () => this.game.resetAllProgress());
+    if (this.dom.btnVictoryRestart) {
+      this.dom.btnVictoryRestart.addEventListener('click', () => {
+        this.game.resetAllProgress();
+      });
+    }
+
     // Graphics setting buttons
     this.dom.btnGraphicsLow.addEventListener('click', () => this.game.setGraphicsLevel('LOW'));
     this.dom.btnGraphicsHigh.addEventListener('click', () => this.game.setGraphicsLevel('HIGH'));
     if (this.dom.btnGraphicsUltra) {
       this.dom.btnGraphicsUltra.addEventListener('click', () => this.game.setGraphicsLevel('ULTRA'));
     }
-    
+
     // Sound toggle
     this.dom.btnSoundToggle.addEventListener('click', () => this.toggleSound());
 
@@ -178,7 +190,7 @@ export class UI {
     const notches = document.querySelectorAll('.throttle-notch');
     if (throttleInput) {
       throttleInput.value = gear;
-      
+
       // Update notch active highlights
       notches.forEach(notch => {
         const nGear = parseInt(notch.getAttribute('data-gear'));
@@ -212,10 +224,10 @@ export class UI {
   toggleSound() {
     this.soundMuted = !this.soundMuted;
     audio.toggleSound(!this.soundMuted);
-    
+
     const svgOn = this.dom.btnSoundToggle.querySelector('.sound-on');
     const svgOff = this.dom.btnSoundToggle.querySelector('.sound-off');
-    
+
     svgOn.classList.toggle('hidden', this.soundMuted);
     svgOff.classList.toggle('hidden', !this.soundMuted);
   }
@@ -245,23 +257,52 @@ export class UI {
     this.dom.hud.classList.add('hidden');
     this.dom.gameOverScreen.classList.remove('hidden');
     this.dom.scannerHud.classList.add('hidden');
-    
+
     this.dom.finalScore.innerText = score;
     this.dom.finalDepth.innerText = Math.round(maxDepth) + "m";
   }
 
+  showVictory(runTime, totalPearls) {
+    // Display victory card
+    this.dom.hud.classList.add('hidden');
+    this.dom.victoryScreen.classList.remove('hidden');
+    this.dom.scannerHud.classList.add('hidden');
+
+    const mins = Math.floor(runTime / 60);
+    const secs = Math.floor(runTime % 60);
+    if (this.dom.victoryTime) {
+      this.dom.victoryTime.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+    if (this.dom.victoryPearls) {
+      this.dom.victoryPearls.innerText = `${totalPearls} 💎`;
+    }
+  }
+
   // Update HUD progress meters and values
-  updateHUD(oxygen, depth, score) {
+  updateHUD(oxygen, depth, score, scanned, totalScan, upgradesCount, totalUpgrades, runTime) {
     // 1. Update meters
     this.dom.o2Bar.style.width = oxygen + "%";
     this.dom.o2Text.innerText = Math.round(oxygen) + "%";
-    
+
     // Oxygen low warning pulse in CSS (red bar glow)
     this.dom.o2Bar.parentElement.classList.toggle('low-warning', oxygen < 25);
-    
+
     // 2. Update scores text
     this.dom.statDepth.innerHTML = Math.round(depth) + `<span class="unit">m</span>`;
     this.dom.statScore.innerText = score;
+
+    // 3. Update dashboard stats
+    if (this.dom.statScanProgress) {
+      this.dom.statScanProgress.innerText = `${scanned}/${totalScan}`;
+    }
+    if (this.dom.statUpgradesProgress) {
+      this.dom.statUpgradesProgress.innerText = `${upgradesCount}/${totalUpgrades}`;
+    }
+    if (this.dom.statRunTimer) {
+      const mins = Math.floor(runTime / 60);
+      const secs = Math.floor(runTime % 60);
+      this.dom.statRunTimer.innerText = `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
   }
 
   showScannerHUD(targetName, distance, scanProgress, isScanned, targetType) {
@@ -278,16 +319,16 @@ export class UI {
         this.dom.scannerTag.style.textShadow = "var(--shadow-neon-secondary)";
         this.dom.scannerTag.style.color = "var(--color-secondary)";
       }
-      
+
       this.dom.scannerTargetName.innerText = "System: Homing Navigation";
       this.dom.scannerTargetDist.innerText = "Range to Base: " + distance.toFixed(1) + "m";
-      
+
       this.dom.scannerProgressContainer.classList.add('hidden');
       this.dom.scannerPrompt.classList.add('hidden');
-      
+
       this.dom.scannerTargetInfo.innerText = targetName; // status string
       this.dom.scannerTargetInfo.classList.remove('hidden');
-      
+
       this.dom.scannerHud.classList.remove('hidden');
       return;
     }
@@ -297,7 +338,7 @@ export class UI {
 
     this.dom.scannerTargetName.innerText = "Target: " + targetName;
     this.dom.scannerTargetDist.innerText = "Range: " + distance.toFixed(1) + "m";
-    
+
     const infoMap = {
       pearl: "Yields 18% Oxygen on capture.",
       jellyfish: "Warning: Stings deplete 18% oxygen & push sub back.",
@@ -313,7 +354,7 @@ export class UI {
       this.dom.scannerTag.style.color = "var(--color-secondary)";
       this.dom.scannerProgressContainer.classList.add('hidden');
       this.dom.scannerPrompt.classList.add('hidden');
-      
+
       this.dom.scannerTargetInfo.innerText = infoMap[targetType] || "";
       this.dom.scannerTargetInfo.classList.remove('hidden');
     } else {
@@ -322,7 +363,7 @@ export class UI {
       this.dom.scannerTag.style.color = "var(--color-primary)";
       this.dom.scannerTargetInfo.classList.add('hidden');
       this.dom.scannerPrompt.classList.remove('hidden');
-      
+
       if (scanProgress > 0) {
         this.dom.scannerProgressContainer.classList.remove('hidden');
         this.dom.scannerProgressBar.style.width = scanProgress + "%";
@@ -332,7 +373,7 @@ export class UI {
         this.dom.scannerPrompt.innerText = this.isMobile ? "Hold [SCAN] to scan" : "Hold [F] to scan";
       }
     }
-    
+
     this.dom.scannerHud.classList.remove('hidden');
   }
 
@@ -347,34 +388,34 @@ export class UI {
         desc: "A dense mineral orb formed in deep ocean trenches under extreme pressure. Emits a strong high-frequency signature. Retrieving these orbs supplies life support subsystems with raw oxygen via electrolysis."
       },
       jellyfish: {
-        title: "Abyssal Jellyfish",
+        title: "Moon Jellyfish",
         desc: "A venomous translucent cnidarian containing bio-electric stinging nematocysts. Collisions with their tentacles trigger severe electrical interference in life support controls and cause automatic pushback thrusts."
       },
       kelp: {
-        title: "Abyssal Kelp Forest",
-        desc: "Gigantic procedural marine flora growing from the ocean bedrock. Their multiple jointed segments sway rhythmically, responding to low-frequency underwater sound waves."
+        title: "Kelp Forest",
+        desc: "Vast marine flora growing from the reef bedrock. Their multiple jointed segments sway rhythmically, responding to low-frequency underwater sound waves."
       },
       rock: {
         title: "Volcanic Coral Rock",
-        desc: "Heavy basalt formations decorated with glowing geothermal coral polyps. These rocky clusters thrive around deep-sea thermal vents, creating dense structural obstacles on the ocean bed."
+        desc: "Heavy basalt formations decorated with glowing geothermal coral polyps. These rocky clusters thrive around shallow thermal vents, creating dense structural obstacles on the reef bed."
       },
       fish: {
-        title: "Abyssal Schooling Fish",
-        desc: "Small, agile schooling teleost fish. They navigate the dark depths in tight synchronised schools to evade larger predators. Peaceful and harmless."
+        title: "Schooling Fish",
+        desc: "Small, agile schooling teleost fish. They navigate the sunlit shallows in tight synchronised schools to evade larger predators. Peaceful and harmless."
       },
       shark: {
-        title: "Abyssal Solitary Shark",
-        desc: "A large solitary apex predator that cruises the ocean depths. Known for its slow, majestic movements. It wanders independently throughout the abyssal zone."
+        title: "Reef Shark",
+        desc: "A large solitary apex predator that patrols the reef. Known for its slow, majestic movements. It wanders independently throughout the shallow reef zone."
       }
     };
 
     for (const key in database) {
       const itemEl = document.getElementById("db-item-" + key);
       if (!itemEl) continue;
-      
+
       const statusEl = itemEl.querySelector(".db-status");
       const descEl = itemEl.querySelector(".db-desc");
-      
+
       if (database[key]) {
         itemEl.classList.add("unlocked");
         statusEl.innerText = "UNLOCKED";
@@ -404,7 +445,7 @@ export class UI {
 
     const speedCosts = [3, 5, 8];
     const oxygenCosts = [3, 5, 8];
-    
+
     // 1. Speed Upgrade
     const speedItem = document.getElementById('research-item-speed');
     const speedBtn = this.dom.btnUpgradeSpeed;
@@ -491,12 +532,12 @@ export class UI {
     const banner = this.dom.surfaceBanner;
     banner.querySelector('span').innerText = text;
     banner.classList.remove('hidden');
-    
+
     // Re-create the pop animation
     banner.style.animation = 'none';
     banner.offsetHeight; /* trigger reflow */
     banner.style.animation = null;
-    
+
     // Hide after animation finishes (2s)
     setTimeout(() => {
       banner.classList.add('hidden');
@@ -506,20 +547,20 @@ export class UI {
   updateSonar(playerPos, playerYaw, entities, delta) {
     const ctx = this.sonarCtx;
     if (!ctx) return;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, 130, 130);
-    
+
     const cx = 65;
     const cy = 65;
     const radarRadius = 60;
     const sonarRange = 90; // max range mapped is 90 meters
     const scale = radarRadius / sonarRange;
-    
+
     // Update sweep angle
     this.sonarSweepAngle = (this.sonarSweepAngle + delta * 2.5) % (Math.PI * 2);
     const sweep = this.sonarSweepAngle;
-    
+
     // 1. Draw concentric background rings and lines
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
     ctx.lineWidth = 1.0;
@@ -528,7 +569,7 @@ export class UI {
     ctx.arc(cx, cy, 40, 0, Math.PI * 2);
     ctx.arc(cx, cy, radarRadius, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     // Crosshairs
     ctx.beginPath();
     ctx.moveTo(cx, cy - radarRadius);
@@ -536,7 +577,7 @@ export class UI {
     ctx.moveTo(cx - radarRadius, cy);
     ctx.lineTo(cx + radarRadius, cy);
     ctx.stroke();
-    
+
     // 2. Draw CRT Sweep line and fading trail (15 sectors)
     for (let i = 0; i < 15; i++) {
       const angle = sweep - i * 0.04;
@@ -548,30 +589,30 @@ export class UI {
       ctx.lineTo(cx + Math.cos(angle) * radarRadius, cy + Math.sin(angle) * radarRadius);
       ctx.stroke();
     }
-    
+
     // 3. Helper to draw fading color-coded blips (Head-Up mapping)
     const drawBlip = (worldX, worldZ, colorStr, size, isSoftCircle = false, softRadius = 0, isVessel = false) => {
       const dx = worldX - playerPos.x;
       const dz = worldZ - playerPos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
       if (dist > sonarRange) return;
-      
+
       // Rotate coordinates relative to player yaw heading (Head-Up mode)
       const relX = -dx * Math.cos(playerYaw) + dz * Math.sin(playerYaw);
       const relZ = dx * Math.sin(playerYaw) + dz * Math.cos(playerYaw);
-      
+
       // Map Z to -Y on canvas and X to +X on canvas
       const bx = cx + relX * scale;
       const by = cy - relZ * scale;
-      
+
       // Calculate angle relative to radar sweep center
       const blipAngle = Math.atan2(-relZ, relX);
       let angleDiff = (sweep - blipAngle) % (Math.PI * 2);
       if (angleDiff < 0) angleDiff += Math.PI * 2;
-      
+
       // Linear decay: sweep creates a bright ping, fading to a 10% baseline glow
       const intensity = Math.max(0.1, 1.0 - angleDiff / (Math.PI * 1.5));
-      
+
       ctx.beginPath();
       if (isVessel) {
         // Draw concentric double circle target in cyan/light blue
@@ -579,7 +620,7 @@ export class UI {
         ctx.lineWidth = 1.5;
         ctx.arc(bx, by, 7, 0, Math.PI * 2);
         ctx.stroke();
-        
+
         ctx.beginPath();
         ctx.strokeStyle = `rgba(0, 240, 255, ${(intensity * 0.9).toFixed(2)})`;
         ctx.fillStyle = `rgba(0, 240, 255, ${(intensity * 0.95).toFixed(2)})`;
@@ -598,7 +639,7 @@ export class UI {
         ctx.fillStyle = colorStr.replace('ALPHA', (intensity * 0.95).toFixed(2));
         ctx.arc(bx, by, size, 0, Math.PI * 2);
         ctx.fill();
-        
+
         // Solid white core at full intensity for metallic radar highlight
         ctx.fillStyle = `rgba(255, 255, 255, ${intensity.toFixed(2)})`;
         ctx.beginPath();
@@ -606,7 +647,7 @@ export class UI {
         ctx.fill();
       }
     };
-    
+
     // 4. Draw Mountains (constant Peak locations)
     const mountains = [
       { x: 70, z: 80, radius: 24 },
@@ -617,10 +658,10 @@ export class UI {
     mountains.forEach(m => {
       drawBlip(m.x, m.z, '', 0, true, m.radius);
     });
-    
+
     // 4.5. Draw Research Vessel at (0, 0)
     drawBlip(0, 0, '', 0, false, 0, true);
-    
+
     // 5. Draw entities
     if (entities) {
       if (entities.pearls) {
@@ -639,7 +680,7 @@ export class UI {
         });
       }
     }
-    
+
     // 6. Draw Player center pointer (Head-Up static orange triangle)
     ctx.fillStyle = '#ff8c00';
     ctx.strokeStyle = '#00f0ff';
