@@ -598,6 +598,8 @@ class Game {
       const distToVessel = this.player.mesh.position.distanceTo(vesselDockPos);
       if (distToVessel < 4.5 && !this.player.isDocked && this.time > this.player.dockCooldown) {
         this.player.isDocked = true;
+        this.player.selectedGear = 0; // Auto-stop engine on dock
+        this.ui.updateGearUI(0);
         this.ui.triggerSurfaceBanner("SUBMERSIBLE DOCKED");
         this.toggleResearchModal(true);
       }
