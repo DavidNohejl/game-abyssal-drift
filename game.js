@@ -100,11 +100,11 @@ class Game {
     this.container.appendChild(this.renderer.domElement);
     
     // 4. Lighting System
-    this.ambientLight = new THREE.AmbientLight(0x0d2b45, 1.5);
+    this.ambientLight = new THREE.AmbientLight(0x0d2b45, 0.75);
     this.scene.add(this.ambientLight);
     
-    // Sunlight filtering through ocean surface
-    this.sunLight = new THREE.DirectionalLight(0xdcf4ff, 2.5);
+    // Sunlight filtering through ocean surface (softer intensity to prevent blowout)
+    this.sunLight = new THREE.DirectionalLight(0xdcf4ff, 1.2);
     this.sunLight.position.set(0, 50, 20);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 1024;
@@ -505,9 +505,9 @@ class Game {
         this.scene.fog.color.copy(currentColor);
       }
       
-      this.ambientLight.intensity = THREE.MathUtils.lerp(1.5, 0.05, depthFactor);
-      this.sunLight.intensity = THREE.MathUtils.lerp(2.5, 0.0, depthFactor);
-      this.camLight.intensity = THREE.MathUtils.lerp(0.8, 0.15, depthFactor);
+      this.ambientLight.intensity = THREE.MathUtils.lerp(0.75, 0.05, depthFactor);
+      this.sunLight.intensity = THREE.MathUtils.lerp(1.2, 0.0, depthFactor);
+      this.camLight.intensity = THREE.MathUtils.lerp(0.65, 0.15, depthFactor);
       
       this.entityManager.update(this.time, delta);
       this.checkCollisions();

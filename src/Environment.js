@@ -173,9 +173,9 @@ export class Environment {
         time: { value: 0.0 },
         // Dynamic depth lighting
         ambientColor: { value: new THREE.Color(0x0d2b45) },
-        ambientIntensity: { value: 1.5 },
+        ambientIntensity: { value: 0.75 },
         sunColor: { value: new THREE.Color(0xdcf4ff) },
-        sunIntensity: { value: 2.5 },
+        sunIntensity: { value: 1.2 },
         // Fog color (dynamic)
         fogColor: { value: new THREE.Color(0x041126) },
         // Headlight spotlight uniforms

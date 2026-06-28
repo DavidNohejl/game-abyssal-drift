@@ -64,21 +64,69 @@ export class Player {
       color: 0x00f0ff
     });
 
-    // Procedural Carbon Fiber weave texture generator for Ultra settings
+    // Procedural Carbon Fiber weave texture & Plate Seams generator for Ultra settings
     const canvas = document.createElement('canvas');
-    canvas.width = 16;
-    canvas.height = 16;
+    canvas.width = 128;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = '#111111';
-    ctx.fillRect(0, 0, 8, 8);
-    ctx.fillRect(8, 8, 8, 8);
+    
+    // 1. Base height map fill (neutral gray)
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(0, 0, 128, 128);
+    
+    // 2. Draw extremely fine carbon fiber micro-weave structure (2x2 checkerboard pixels)
+    for (let y = 0; y < 128; y += 4) {
+      for (let x = 0; x < 128; x += 4) {
+        const offset = ((x + y) / 4) % 2 === 0;
+        ctx.fillStyle = offset ? '#929292' : '#7e7e7e';
+        ctx.fillRect(x, y, 4, 4);
+      }
+    }
+    
+    // 3. Draw recessed plate seams (dark grooves for bump caving)
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = '#1b1b1b'; // dark lines create indented seams
+    
+    // Horizontal seams
+    ctx.beginPath();
+    ctx.moveTo(0, 32);
+    ctx.lineTo(128, 32);
+    ctx.moveTo(0, 96);
+    ctx.lineTo(128, 96);
+    ctx.stroke();
+    
+    // Vertical seams (staggered brick/plate layout)
+    ctx.beginPath();
+    // Top row
+    ctx.moveTo(32, 0); ctx.lineTo(32, 32);
+    ctx.moveTo(96, 0); ctx.lineTo(96, 32);
+    // Mid row
+    ctx.moveTo(0, 32); ctx.lineTo(0, 96);
+    ctx.moveTo(64, 32); ctx.lineTo(64, 96);
+    // Bottom row
+    ctx.moveTo(32, 96); ctx.lineTo(32, 128);
+    ctx.moveTo(96, 96); ctx.lineTo(96, 128);
+    ctx.stroke();
+
+    // 4. Draw metal rivets along seams for industrial plating look
+    ctx.fillStyle = '#a0a0a0'; // raised dots
+    const drawRivet = (rx, ry) => {
+      ctx.beginPath();
+      ctx.arc(rx, ry, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    // Place rivets periodically along horizontal seams
+    for (let rx = 8; rx < 128; rx += 16) {
+      drawRivet(rx, 35);
+      drawRivet(rx, 29);
+      drawRivet(rx, 99);
+      drawRivet(rx, 93);
+    }
     
     this.carbonBumpTex = new THREE.CanvasTexture(canvas);
     this.carbonBumpTex.wrapS = THREE.RepeatWrapping;
     this.carbonBumpTex.wrapT = THREE.RepeatWrapping;
-    this.carbonBumpTex.repeat.set(24, 12);
+    this.carbonBumpTex.repeat.set(10, 5); // Tiled larger to make panels visible and fiber structure tiny!
 
     // Deck safety pipes/cables (orange tubes running on the top flanks of the hull capsule)
     const pipeGeo = new THREE.CylinderGeometry(0.015, 0.015, 1.3, 6);
@@ -197,11 +245,8 @@ export class Player {
     for (let i = 0; i < 3; i++) {
       const zOffset = 0.6 - i * 0.6;
       
-      // Calculate hull radius at this Z position to place the windows exactly on the curved surface
-      const hullRadiusX = 0.85;
-      const hullLength = 2.2;
-      const zRatio = zOffset / hullLength;
-      const r = hullRadiusX * Math.sqrt(Math.max(0.1, 1.0 - zRatio * zRatio));
+      // Since the windows sit on the straight cylindrical body (Z = -1.0 to 1.0), their hull radius is exactly 0.85
+      const r = 0.85;
 
       // Left side porthole (grouped frame + neon glass)
       const leftPorthole = new THREE.Group();
